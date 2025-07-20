@@ -1,0 +1,2309 @@
+#!/bin/bash
+
+# OmegaRouter Complete Implementation Setup Script
+
+# Target: macOS Desktop
+
+# This script creates a fully functional implementation of the OmegaRouter AI Agent Collaboration Platform.
+
+PROJECT_NAME=“OmegaRouter”
+PROJECT_DIR=”/Users/D3/Desktop/$PROJECT_NAME”
+
+echo “🚀 Starting OmegaRouter Complete Implementation Setup…”
+
+# — Helper Functions —
+
+print_success() {
+echo “✅ $1”
+}
+
+print_info() {
+echo “ℹ️ $1”
+}
+
+print_warning() {
+echo “⚠️ $1”
+}
+
+print_error() {
+echo “❌ $1”
+exit 1
+}
+
+# — Prerequisites Check —
+
+print_info “Checking prerequisites (manual check required by user):”
+print_info “- Docker Desktop for Mac (essential)”
+print_info “- A good text editor (e.g., VS Code)”
+print_info “- Git (recommended for version control, not strictly needed for this script)”
+
+# — Create Project Directory —
+
+if [ -d “$PROJECT_DIR” ]; then
+print_warning “Project directory $PROJECT_DIR already exists.”
+read -p “Do you want to overwrite it? (y/N): “ overwrite_confirm
+if [[ “$overwrite_confirm” =~ ^[Yy]$ ]]; then
+print_info “Removing existing directory…”
+rm -rf “$PROJECT_DIR”
+else
+print_error “Setup aborted by user.”
+fi
+fi
+mkdir -p “$PROJECT_DIR”
+cd “$PROJECT_DIR” || print_error “Could not change to project directory.”
+print_success “Created project directory: $PROJECT_DIR”
+
+# — Create Core Directories —
+
+mkdir -p backend
+mkdir -p backend/app
+mkdir -p backend/app/api
+mkdir -p backend/app/api/api_v1
+mkdir -p backend/app/api/api_v1/endpoints
+mkdir -p backend/app/core
+mkdir -p backend/app/models
+mkdir -p backend/app/schemas
+mkdir -p backend/app/services
+mkdir -p backend/app/agents
+mkdir -p backend/app/db
+mkdir -p backend/app/utils
+mkdir -p backend/tests
+mkdir -p frontend
+mkdir -p frontend/src
+mkdir -p frontend/src/components
+mkdir -p frontend/src/components/layout
+mkdir -p frontend/src/components/ui
+mkdir -p frontend/src/pages
+mkdir -p frontend/src/services
+mkdir -p frontend/src/contexts
+mkdir -p frontend/src/hooks
+mkdir -p frontend/src/assets
+mkdir -p frontend/src/styles
+mkdir -p frontend/src/lib
+mkdir -p frontend/src/types
+mkdir -p data # For SQLite DB, logs, agent artifacts
+mkdir -p prompts # For prompt templates
+mkdir -p backend/alembic/versions # For database migrations
+
+print_success “Created core directory structure.”
+
+# — Create .env.example & .env —
+
+print_info “Creating .env.example and .env file…”
+cat <<EOL > .env.example
+
+# OmegaRouter Environment Variables
+
+# — General —
+
+ENVIRONMENT=development # development, production
+LOG_LEVEL=INFO
+PROJECT_NAME=“OmegaRouter”
+API_V1_STR=”/api/v1”
+SECRET_KEY=your_very_secret_key_here_please_change_me # For JWT, etc.
+ACCESS_TOKEN_EXPIRE_MINUTES=10080 # 7 days
+API_ENCRYPTION_KEY=your_fernet_encryption_key_here_change_me
+
+# — Database (SQLite for local, PostgreSQL for production) —
+
+DATABASE_URL=“sqlite:///./data/omegarouter.db”
+
+# For PostgreSQL example:
+
+# POSTGRES_SERVER=db
+
+# POSTGRES_USER=omegarouter_user
+
+# POSTGRES_PASSWORD=omegarouter_password
+
+# POSTGRES_DB=omegarouter_db
+
+# DATABASE_URL=“postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_SERVER}:5432/${POSTGRES_DB}”
+
+# — LLM API Keys (IMPORTANT: Keep these secret!) —
+
+# Store your actual keys in the .env file (which is gitignored)
+
+OPENAI_API_KEY=“sk-your_openai_api_key”
+ANTHROPIC_API_KEY=“sk-ant-your_anthropic_api_key”
+
+# Add other LLM provider keys as needed
+
+# — Agent Configuration —
+
+DEFAULT_AGENT_MODEL=“gpt-4o”
+MAX_ITERATIONS_PER_GOAL=10
+MAX_CONTEXT_TOKENS=8000 # Example limit, adjust per model
+
+# — CORS —
+
+BACKEND_CORS_ORIGINS=“http://localhost:5173,http://127.0.0.1:5173” # Default for Vite dev
+
+# — First Superuser —
+
+FIRST_SUPERUSER_EMAIL=“admin@omegarouter.com”
+FIRST_SUPERUSER_PASSWORD=“omegarouter_changeme”
+
+# — Frontend —
+
+# VITE_API_BASE_URL will be set by docker-compose or if running frontend separately
+
+# VITE_API_BASE_URL=http://localhost:8000/api/v1
+
+EOL
+
+# Create .env from .env.example
+
+cp .env.example .env
+print_success “Created .env from .env.example. Please edit .env with your actual API keys and secrets.”
+
+# — Create .gitignore —
+
+print_info “Creating .gitignore…”
+cat <<EOL > .gitignore
+
+# Byte-compiled / optimized / DLL files
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# C extensions
+
+*.so
+
+# Distribution / packaging
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+
+# Usually these files are written by a python script from a template
+
+# before PyInstaller builds the exe, so as to inject date/other infos into it.
+
+*.manifest
+*.spec
+
+# Installer logs
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+
+*.mo
+*.pot
+
+# Django stuff:
+
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+
+.scrapy
+
+# Sphinx documentation
+
+docs/_build/
+
+# PyBuilder
+
+target/
+
+# Jupyter Notebook
+
+.ipynb_checkpoints
+
+# IPython
+
+profile_default/
+ipython_config.py
+
+# PEP 582; **pypackages**
+
+**pypackages**/
+
+# Celery stuff
+
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath files
+
+*.sage.py
+
+# Environments
+
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+
+.spyderproject
+.spyderworkspace
+
+# Rope project settings
+
+.ropeproject
+
+# mkdocs documentation
+
+/site
+
+# mypy
+
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+
+.pyre/
+
+# poetry
+
+poetry.lock
+
+# pdm
+
+pdm.lock
+.pdm.toml
+
+# Node.js
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Vite
+
+dist/
+.vite/
+
+# macOS
+
+.DS_Store
+*.AppleDouble
+.LSOverride
+
+# Thumbnails
+
+._*
+
+# Files that might appear in the root of a volume
+
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP volumes
+
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Data
+
+data/omegarouter.db
+data/omegarouter.db-journal
+data/*.log
+data/agent_artifacts/
+
+# IDE / Editor specific
+
+.vscode/
+.idea/
+*.swp
+*.swo
+EOL
+print_success “Created .gitignore.”
+
+# — Create Backend Dockerfile —
+
+print_info “Creating backend/Dockerfile…”
+cat <<EOL > backend/Dockerfile
+
+# Use an official Python runtime as a parent image
+
+FROM python:3.11-slim-bullseye
+
+# Set environment variables
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set work directory
+
+WORKDIR /app
+
+# Install system dependencies (if any, e.g., for Pillow or other C-extensions)
+
+# RUN apt-get update && apt-get install -y –no-install-recommends \
+
+# gcc \
+
+# && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+
+RUN pip install –no-cache-dir poetry==1.7.1 # Pinning poetry version for stability
+
+# Copy only requirements to cache them
+
+COPY pyproject.toml poetry.lock* ./
+
+# Install project dependencies
+
+# –no-root: Don’t install the project itself as editable, install dependencies only
+
+# RUN poetry install –no-interaction –no-ansi –no-root
+
+# If you have issues with –no-root or want the project installed:
+
+RUN poetry install –no-interaction –no-ansi –no-dev # No dev dependencies in prod image
+
+# Copy the rest of the application
+
+COPY . .
+
+# Expose port
+
+EXPOSE 8000
+
+# Run the application using Uvicorn with Poetry
+
+# The CMD will be overridden by docker-compose for development (with –reload)
+
+CMD [“poetry”, “run”, “uvicorn”, “app.main:app”, “–host”, “0.0.0.0”, “–port”, “8000”]
+EOL
+print_success “Created backend/Dockerfile.”
+
+# — Create backend/pyproject.toml (Poetry) —
+
+print_info “Creating backend/pyproject.toml…”
+cat <<EOL > backend/pyproject.toml
+[tool.poetry]
+name = “omegarouter-backend”
+version = “0.1.0”
+description = “Backend for OmegaRouter AI Agent Collaboration Platform”
+authors = [“Your Name [you@example.com](mailto:you@example.com)”]
+readme = “README.md”
+
+[tool.poetry.dependencies]
+python = “^3.10”
+fastapi = “^0.111.0”
+uvicorn = {extras = [“standard”], version = “^0.29.0”}
+sqlalchemy = “^2.0.29”
+alembic = “^1.13.1”
+psycopg2-binary = {version = “^2.9.9”, optional = true} # For PostgreSQL, if used later
+python-dotenv = “^1.0.1”
+pydantic-settings = “^2.2.1”
+openai = “^1.25.2”
+anthropic = “^0.25.0” # For Anthropic models if used
+langchain = “^0.2.0” # Or other agent frameworks if preferred
+langchain-openai = “^0.1.7”
+langchain-anthropic = “^0.1.10”
+tenacity = “^8.2.3” # For retries with LLM calls
+passlib = {extras = [“bcrypt”], version = “^1.7.4”} # For password hashing
+python-jose = {extras = [“cryptography”], version = “^3.3.0”} # For JWT
+pydantic = {extras = [“email”], version = “^2.7.1”} # For data validation and settings
+jinja2 = “^3.1.3” # For prompt templating
+cryptography = “^42.0.5” # For API key encryption with Fernet
+tiktoken = “^0.7.0” # For token counting
+
+[tool.poetry.extras]
+postgres = [“psycopg2-binary”]
+
+[tool.poetry.group.dev.dependencies]
+pytest = “^8.2.0”
+pytest-asyncio = “^0.23.6”
+httpx = “^0.27.0” # For testing FastAPI endpoints
+black = “^24.4.2”
+isort = “^5.13.2”
+flake8 = “^7.0.0”
+mypy = “^1.9.0”
+
+[build-system]
+requires = [“poetry-core”]
+build-backend = “poetry.core.masonry.api”
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = “black”
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.mypy]
+python_version = “3.10”
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true # Can be set to false for stricter checks
+plugins = [
+“pydantic.mypy”
+]
+EOL
+print_success “Created backend/pyproject.toml.”
+
+# Now let’s create all the necessary files for our implementation.
+
+# We’ll start with the backend files, which is where the core functionality lives.
+
+# — Create backend/app/core/config.py —
+
+print_info “Creating backend/app/core/config.py…”
+cat <<EOL > backend/app/core/config.py
+from pydantic import AnyHttpUrl, field_validator, EmailStr, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import List, Union, Optional
+
+class Settings(BaseSettings):
+PROJECT_NAME: str = “OmegaRouter”
+API_V1_STR: str = “/api/v1”
+
+```
+ENVIRONMENT: str = "development"
+LOG_LEVEL: str = "INFO"
+
+SECRET_KEY: str
+ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+ALGORITHM: str = "HS256"
+
+DATABASE_URL: str
+# ASYNC_DATABASE_URL: Optional[str] = None 
+
+OPENAI_API_KEY: Optional[str] = None
+ANTHROPIC_API_KEY: Optional[str] = None
+
+DEFAULT_AGENT_MODEL: str = "gpt-4o"
+MAX_ITERATIONS_PER_GOAL: int = 10
+MAX_CONTEXT_TOKENS: int = 16000
+
+BACKEND_CORS_ORIGINS: Union[str, List[AnyHttpUrl]] = "http://localhost:5173,http://127.0.0.1:5173"
+
+@field_validator("BACKEND_CORS_ORIGINS", mode='before')
+@classmethod
+def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+    if isinstance(v, str) and not v.startswith("["):
+        # Ensure it's a list of valid URLs or a wildcard string
+        origins = [item.strip() for item in v.split(",")]
+        if "*" in origins: return "*" # Keep wildcard as string if present
+        return origins # Return list of strings
+    elif isinstance(v, list):
+        return v # Already a list
+    raise ValueError(f"Invalid BACKEND_CORS_ORIGINS format: {v}")
+
+FIRST_SUPERUSER_EMAIL: Optional[EmailStr] = "admin@omegarouter.com"
+FIRST_SUPERUSER_PASSWORD: Optional[str] = "omegarouter_changeme"
+
+# For Fernet key, ensure it's 32 url-safe base64-encoded bytes
+# Stored in .env as a base64 encoded string
+API_ENCRYPTION_KEY: str = Field(..., min_length=44, max_length=44) # Fernet keys are 44 chars (base64 of 32 bytes)
+
+model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', extra='ignore')
+```
+
+settings = Settings()
+EOL
+print_success “Created backend/app/core/config.py.”
+
+# — Create backend/app/db/base_class.py —
+
+print_info “Creating backend/app/db/base_class.py…”
+cat <<EOL > backend/app/db/base_class.py
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Integer, DateTime, func # Keep Column for explicit type annotation if needed
+from datetime import datetime # Keep datetime for type hint
+
+class Base(DeclarativeBase):
+“””
+Base class for SQLAlchemy models.
+Includes default id, created_at, and updated_at columns using Mapped.
+“””
+id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
+created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+EOL
+print_success “Created backend/app/db/base_class.py.”
+
+# — Create backend/app/db/session.py —
+
+print_info “Creating backend/app/db/session.py…”
+cat <<EOL > backend/app/db/session.py
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session as SQLAlchemySession # Renamed to avoid conflict
+from typing import Generator
+
+from app.core.config import settings
+
+# Create a synchronous engine instance
+
+# For SQLite, connect_args are needed to support multithreading if FastAPI uses threads
+
+if “sqlite” in settings.DATABASE_URL:
+engine = create_engine(settings.DATABASE_URL, connect_args={“check_same_thread”: False}, pool_pre_ping=True)
+else:
+engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db() -> Generator[SQLAlchemySession, None, None]:
+“””
+Dependency to get a DB session.
+Ensures the session is closed after the request.
+“””
+db: SQLAlchemySession = SessionLocal()
+try:
+yield db
+finally:
+db.close()
+
+# If you plan to use Async SQLAlchemy:
+
+# from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+# if settings.ASYNC_DATABASE_URL:
+
+# async_engine = create_async_engine(settings.ASYNC_DATABASE_URL, pool_pre_ping=True)
+
+# AsyncSessionLocal = async_sessionmaker(
+
+# bind=async_engine, class_=AsyncSession, expire_on_commit=False
+
+# )
+
+# 
+
+# async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+
+# async with AsyncSessionLocal() as session:
+
+# yield session
+
+EOL
+print_success “Created backend/app/db/session.py.”
+
+# — Create backend/app/core/security.py —
+
+print_info “Creating backend/app/core/security.py…”
+cat <<EOL > backend/app/core/security.py
+from datetime import datetime, timedelta, timezone
+from typing import Any, Union, Optional
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from cryptography.fernet import Fernet, InvalidToken as FernetInvalidToken
+
+from app.core.config import settings
+from app.models.user import User as UserModel # SQLAlchemy model
+from app.schemas.token import TokenPayload # Pydantic schema
+from app.db.session import get_db # For DB access in dependency
+from sqlalchemy.orm import Session as SQLAlchemySession # Renamed for clarity
+
+pwd_context = CryptContext(schemes=[“bcrypt”], deprecated=“auto”)
+
+# Ensure API_V1_STR starts with a slash if not empty, or handle empty string case
+
+token_url = f”{settings.API_V1_STR if settings.API_V1_STR.startswith(’/’) else ‘/’ + settings.API_V1_STR}/auth/login/access-token”
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=token_url)
+
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+
+# Fernet cipher for API key encryption
+
+# API_ENCRYPTION_KEY must be a 32-byte URL-safe base64-encoded string.
+
+# settings.API_ENCRYPTION_KEY is expected to be this base64 string.
+
+try:
+fernet_cipher = Fernet(settings.API_ENCRYPTION_KEY.encode())
+except Exception as e:
+# This is a critical setup error. Application should not start if key is invalid.
+# In a real app, you might log this and exit, or raise a specific startup exception.
+print(f”FATAL: Invalid API_ENCRYPTION_KEY for Fernet: {e}. Key must be 32 URL-safe base64-encoded bytes.”)
+# For this script, we’ll let it proceed but log a severe warning.
+# A production app should fail hard here.
+import logging
+logging.getLogger(**name**).critical(f”Invalid API_ENCRYPTION_KEY: {e}. API key encryption/decryption will fail.”)
+fernet_cipher = None # Ensure it’s None if initialization fails
+
+def create_access_token(
+subject: Union[str, Any], user_id: int, expires_delta: Optional[timedelta] = None
+) -> str:
+if expires_delta:
+expire = datetime.now(timezone.utc) + expires_delta
+else:
+expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+```
+to_encode = {"exp": expire, "sub": str(subject), "user_id": user_id} # Include user_id directly
+encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+return encoded_jwt
+```
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+return pwd_context.hash(password)
+
+async def get_current_user(
+db: SQLAlchemySession = Depends(get_db), token: str = Depends(oauth2_scheme)
+) -> UserModel:
+credentials_exception = HTTPException(
+status_code=status.HTTP_401_UNAUTHORIZED,
+detail=“Could not validate credentials”,
+headers={“WWW-Authenticate”: “Bearer”},
+)
+try:
+payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+email: Optional[str] = payload.get(“sub”)
+user_id_from_token: Optional[int] = payload.get(“user_id”)
+
+```
+    if email is None and user_id_from_token is None: # Need at least one identifier
+        raise credentials_exception
+    
+    # Pydantic validation of token payload (optional but good practice)
+    token_data = TokenPayload(sub=email, user_id=user_id_from_token)
+
+except JWTError:
+    raise credentials_exception
+
+user: Optional[UserModel] = None
+if token_data.user_id: # Prefer user_id if available
+    user = db.query(UserModel).filter(UserModel.id == token_data.user_id).first()
+elif token_data.sub: # Fallback to email if user_id not in token (legacy or other systems)
+    user = db.query(UserModel).filter(UserModel.email == token_data.sub).first()
+
+if user is None:
+    raise credentials_exception
+return user
+```
+
+async def get_current_active_user(
+current_user: UserModel = Depends(get_current_user),
+) -> UserModel:
+if not current_user.is_active:
+raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=“Inactive user”)
+return current_user
+
+async def get_current_active_superuser(
+current_user: UserModel = Depends(get_current_active_user),
+) -> UserModel:
+if not current_user.is_superuser:
+raise HTTPException(
+status_code=status.HTTP_403_FORBIDDEN, detail=“The user doesn’t have enough privileges”
+)
+return current_user
+
+# — Fernet Encryption/Decryption for API Keys —
+
+def fernet_encrypt(data: str) -> bytes:
+if fernet_cipher is None:
+raise RuntimeError(“Fernet cipher not initialized due to invalid API_ENCRYPTION_KEY.”)
+return fernet_cipher.encrypt(data.encode())
+
+def fernet_decrypt(encrypted_data: bytes) -> str:
+if fernet_cipher is None:
+raise RuntimeError(“Fernet cipher not initialized due to invalid API_ENCRYPTION_KEY.”)
+try:
+return fernet_cipher.decrypt(encrypted_data).decode()
+except FernetInvalidToken:
+# Handle cases where token is invalid (e.g., wrong key, corrupted data)
+# Log this event securely
+logging.getLogger(**name**).error(“Fernet decryption failed: Invalid token.”)
+raise ValueError(“Invalid encrypted data or key mismatch.”) # Or a custom exception
+EOL
+print_success “Created backend/app/core/security.py.”
+
+# — Create backend/app/models/**init**.py —
+
+print_info “Creating backend/app/models/**init**.py…”
+cat <<EOL > backend/app/models/**init**.py
+
+# Import all models here to make them accessible via app.models
+
+# This also helps Alembic discover them during autogeneration.
+
+from .user import User
+from .project import Project
+from .session_state import SessionState # For project/collaboration sessions
+from .agent_config import AgentConfiguration
+from .conversation import Conversation
+from .message import Message
+from .prompt_template import PromptTemplate
+from .api_key_store import APIKeyStore # If storing user API keys encrypted
+
+**all** = [
+“User”,
+“Project”,
+“SessionState”,
+“AgentConfiguration”,
+“Conversation”,
+“Message”,
+“PromptTemplate”,
+“APIKeyStore”,
+]
+EOL
+print_success “Created backend/app/models/**init**.py.”
+
+# — Create backend/app/models/user.py —
+
+print_info “Creating backend/app/models/user.py…”
+cat <<EOL > backend/app/models/user.py
+from sqlalchemy import String, Boolean, ForeignKey # Column, Integer, already imported in base
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import List # For type hinting relationships
+
+from app.db.base_class import Base
+
+class User(Base):
+**tablename** = “users”
+
+```
+# id, created_at, updated_at from Base
+
+email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+full_name: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
+hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
+
+# Relationships
+# Specify lazy='selectin' for eager loading of projects if frequently accessed together,
+# or keep default 'select' (lazy loading)
+projects: Mapped[List["Project"]] = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+api_keys: Mapped[List["APIKeyStore"]] = relationship("APIKeyStore", back_populates="user", cascade="all, delete-orphan")
+
+def __repr__(self):
+    return f"<User(id={self.id}, email='{self.email}')>"
+```
+
+EOL
+print_success “Created backend/app/models/user.py.”
+
+# — Create backend/app/models/project.py —
+
+print_info “Creating backend/app/models/project.py…”
+cat <<EOL > backend/app/models/project.py
+from sqlalchemy import String, Text, ForeignKey, JSON # DateTime already imported in base
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import Optional, TYPE_CHECKING, List
+
+from app.db.base_class import Base
+
+if TYPE_CHECKING:
+from .user import User
+from .conversation import Conversation
+from .session_state import SessionState
+from .agent_config import AgentConfiguration # If direct relationship or through link table
+
+class Project(Base):
+**tablename** = “projects”
+
+```
+# id, created_at, updated_at from Base
+
+name: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+goal: Mapped[str] = mapped_column(Text, nullable=False)
+status: Mapped[str] = mapped_column(String(50), default="pending") # e.g., pending, active, completed, failed, paused
+
+owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+owner: Mapped["User"] = relationship("User", back_populates="projects")
+
+# Relationships
+# A project has one main conversation thread that orchestrates agents
+conversation: Mapped[Optional["Conversation"]] = relationship("Conversation", back_populates="project", uselist=False, cascade="all, delete-orphan")
+
+# A project has one active session state
+session_state: Mapped[Optional["SessionState"]] = relationship("SessionState", back_populates="project", uselist=False, cascade="all, delete-orphan")
+
+# A project might be associated with multiple agent configurations.
+# This could be a many-to-many relationship if configs are reusable,
+# or a one-to-many if configs are project-specific copies.
+# Example: Storing a JSON blob of selected agent config IDs or roles for this project
+selected_agent_config_ids: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # e.g., {"planner": 1, "coder": 2}
+
+# Or a proper many-to-many link table for reusable AgentConfiguration entities:
+# agent_configurations: Mapped[List["AgentConfiguration"]] = relationship(
+#     secondary="project_agent_config_link", back_populates="projects"
+# )
+
+
+# Store project-specific artifacts or results. Consider a dedicated table for complex artifacts.
+artifacts_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # e.g., {"code_file": "/path/to/code.py", "report": "report_id_123"}
+
+def __repr__(self):
+    return f"<Project(id={self.id}, name='{self.name}')>"
+```
+
+# If using a many-to-many link table for Project and AgentConfiguration:
+
+# from sqlalchemy import Table, Column, Integer
+
+# project_agent_config_link = Table(
+
+# “project_agent_config_link”,
+
+# Base.metadata,
+
+# Column(“project_id”, ForeignKey(“projects.id”), primary_key=True),
+
+# Column(“agent_config_id”, ForeignKey(“agent_configurations.id”), primary_key=True),
+
+# )
+
+EOL
+print_success “Created backend/app/models/project.py.”
+
+# — Create backend/app/models/session_state.py —
+
+print_info “Creating backend/app/models/session_state.py…”
+cat <<EOL > backend/app/models/session_state.py
+from sqlalchemy import String, Text, ForeignKey, JSON, Integer # DateTime already imported in base
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import Optional, Any, TYPE_CHECKING
+
+from app.db.base_class import Base
+
+if TYPE_CHECKING:
+from .project import Project
+
+class SessionState(Base):
+**tablename** = “session_states”
+# id, created_at, updated_at from Base
+
+```
+project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False, unique=True, index=True)
+project: Mapped["Project"] = relationship("Project", back_populates="session_state")
+
+current_step_info: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # e.g., "Planner generating initial plan", "Coder working on task X"
+current_status: Mapped[str] = mapped_column(String(50), default="initializing") # e.g., initializing, agent_processing, user_input_required, completed, error, paused
+global_context: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # Shared context, potentially summarized
+
+# For arbitrary state data, agent-specific intermediate results, iteration counts etc.
+# Can store things like: current_active_agent_id, retry_counts, full_plan_json, sub_task_status
+state_data: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True) 
+
+last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+# Iteration count for the current goal or sub-goal
+iteration_count: Mapped[int] = mapped_column(Integer, default=0)
+
+
+def __repr__(self):
+    return f"<SessionState(project_id={self.project_id}, status='{self.current_status}')>"
+```
+
+EOL
+print_success “Created backend/app/models/session_state.py.”
+
+# — Create backend/app/models/agent_config.py —
+
+print_info “Creating backend/app/models/agent_config.py…”
+cat <<EOL > backend/app/models/agent_config.py
+from sqlalchemy import String, Text, JSON, Integer, Float, ForeignKey # DateTime already imported in base
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import Optional, List, Any, TYPE_CHECKING
+
+from app.db.base_class import Base
+
+if TYPE_CHECKING:
+from .prompt_template import PromptTemplate
+# from .project import Project # If using a many-to-many link table
+
+class AgentConfiguration(Base):
+**tablename** = “agent_configurations”
+# id, created_at, updated_at from Base
+
+```
+name: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+role: Mapped[str] = mapped_column(String(100), nullable=False, index=True) # e.g., "Planner", "Coder", "Reviewer"
+description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+llm_model_name: Mapped[str] = mapped_column(String(100), default="gpt-4o") # e.g., "gpt-4o", "claude-3-opus-20240229"
+temperature: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # Specific temperature if overriding default
+max_tokens_to_generate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # Max tokens for agent's output
+
+# System prompt or base instructions for this agent type
+base_prompt_template_id: Mapped[Optional[int]] = mapped_column(ForeignKey("prompt_templates.id"), nullable=True)
+base_prompt_template: Mapped[Optional["PromptTemplate"]] = relationship("PromptTemplate", lazy="selectin") # Eager load if always needed
+
+# Configuration specific to the agent's tools or capabilities
+# e.g., {"web_search": {"enabled": true, "api_key_ref": "SERPAPI_KEY"}, "code_interpreter": {"enabled": true}}
+tools_config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True) 
+
+# user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True) # If agents are user-specific or user-owned templates
+# user: Mapped[Optional["User"]] = relationship("User")
+
+# If using a many-to-many link table with Project:
+# projects: Mapped[List["Project"]] = relationship(
+#     secondary="project_agent_config_link", back_populates="agent_configurations"
+# )
+
+def __repr__(self):
+    return f"<AgentConfiguration(id={self.id}, name='{self.name}', role='{self.role}')>"
+```
+
+EOL
+print_success “Created backend/app/models/agent_config.py.”
+
+# — Create backend/app/models/conversation.py —
+
+print_info “Creating backend/app/models/conversation.py…”
+cat <<EOL > backend/app/models/conversation.py
+from sqlalchemy import ForeignKey, Integer # DateTime already imported in base
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import List, Optional, TYPE_CHECKING
+
+from app.db.base_class import Base
+
+if TYPE_CHECKING:
+from .project import Project
+from .message import Message
+# from .user import User # If conversations are directly tied to users outside projects
+
+class Conversation(Base):
+**tablename** = “conversations”
+# id, created_at, updated_at from Base
+
+```
+project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False, unique=True, index=True) # One main conversation per project
+project: Mapped["Project"] = relationship("Project", back_populates="conversation")
+
+# user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True) # Who initiated this conversation scope
+# user: Mapped[Optional["User"]] = relationship("User")
+
+# To store overall conversation metadata, if any
+# title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+# context_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # Auto-generated summary for long conversations
+
+# Order messages by timestamp by default when loading the relationship
+messages: Mapped[List["Message"]] = relationship("Message", back_populates="conversation", cascade="all, delete-orphan", order_by="Message.timestamp")
+
+def __repr__(self):
+    return f"<Conversation(id={self.id}, project_id={self.project_id})>"
+```
+
+EOL
+print_success “Created backend/app/models/conversation.py.”
+
+# — Create backend/app/models/message.py —
+
+print_info “Creating backend/app/models/message.py…”
+cat <<EOL > backend/app/models/message.py
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, Integer # DateTime, func already imported in base
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.sql import func
+from typing import Optional, Any, TYPE_CHECKING
+from datetime import datetime # For explicit timestamp type
+
+from app.db.base_class import Base
+
+if TYPE_CHECKING:
+from .conversation import Conversation
+
+class Message(Base):
+**tablename** = “messages”
+# id, created_at from Base. `created_at` can serve as timestamp.
+# Override timestamp if specific control or non-server-default is needed.
+timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+```
+conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id"), nullable=False, index=True)
+conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")
+
+sender_type: Mapped[str] = mapped_column(String(50), nullable=False) # "user", "agent", "system"
+sender_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) # e.g., User's name or Agent's role/name ("Planner", "Coder")
+
+content: Mapped[str] = mapped_column(Text, nullable=False) # The actual message text
+
+# Optional: for structured data, tool calls/results, artifacts
+message_type: Mapped[str] = mapped_column(String(50), default="text") # "text", "tool_call", "tool_result", "artifact_pointer", "error", "info"
+metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True) # e.g., tool_id, file_path for artifact, tokens_used, error_details
+
+# parent_message_id: Mapped[Optional[int]] = mapped_column(ForeignKey("messages.id"), nullable=True) # For threaded replies within a turn
+# children_messages: Mapped[List["Message"]] = relationship("Message", backref=backref('parent_message', remote_side=[id]))
+
+# Override updated_at from Base if messages are immutable after creation
+# updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now()) # No onupdate
+
+def __repr__(self):
+    return f"<Message(id={self.id}, sender='{self.sender_name or self.sender_type}', type='{self.message_type}')>"
+```
+
+EOL
+print_success “Created backend/app/models/message.py.”
+
+# — Create backend/app/models/prompt_template.py —
+
+print_info “Creating backend/app/models/prompt_template.py…”
+cat <<EOL > backend/app/models/prompt_template.py
+from sqlalchemy import String, Text, JSON # DateTime already imported in base
+from sqlalchemy.orm import Mapped, mapped_column # Remove ‘relationship’ if no relations from here
+from typing import Optional, List
+
+from app.db.base_class import Base
+
+class PromptTemplate(Base):
+**tablename** = “prompt_templates”
+# id, created_at, updated_at from Base
+
+```
+name: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+template_content: Mapped[str] = mapped_column(Text, nullable=False) # Using Jinja2 or f-string like syntax, e.g. "Analyze this: {{text_input}}"
+
+# List of expected variable names, e.g., ["text_input", "user_goal"]
+# Could also store metadata about variables like type or description.
+variables: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True) 
+
+version: Mapped[str] = mapped_column(String(50), default="1.0")
+category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True) # e.g., "planning", "coding", "summarization"
+
+# Example of a relationship if AgentConfiguration references this template
+# agent_configurations: Mapped[List["AgentConfiguration"]] = relationship(back_populates="base_prompt_template")
+
+def __repr__(self):
+    return f"<PromptTemplate(id={self.id}, name='{self.name}')>"
+```
+
+EOL
+print_success “Created backend/app/models/prompt_template.py.”
+
+# — Create backend/app/models/api_key_store.py —
+
+print_info “Creating backend/app/models/api_key_store.py…”
+cat <<EOL > backend/app/models/api_key_store.py
+from sqlalchemy import String, LargeBinary, ForeignKey, Integer # DateTime already imported in base
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import TYPE_CHECKING, Optional
+from app.core.security import fernet_encrypt, fernet_decrypt # For encryption
+
+from app.db.base_class import Base
+
+if TYPE_CHECKING:
+from .user import User
+
+class APIKeyStore(Base):
+**tablename** = “api_key_stores”
+# id, created_at, updated_at from Base
+
+```
+user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+user: Mapped["User"] = relationship("User", back_populates="api_keys")
+
+service_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True) # e.g., "OPENAI", "ANTHROPIC", "SERPAPI"
+encrypted_api_key: Mapped[bytes] = mapped_column(LargeBinary, nullable=False) # Store encrypted key
+
+key_scope: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) # e.g., "project_specific", "user_wide", "tool_specific"
+description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True) # e.g., "My personal OpenAI key"
+
+_plain_api_key: Optional[str] = None # Temporary storage for decrypted key, not persisted
+
+@property
+def api_key(self) -> str:
+    if self._plain_api_key is None and self.encrypted_api_key:
+        self._plain_api_key = fernet_decrypt(self.encrypted_api_key)
+    if self._plain_api_key is None: # Should not happen if encrypted_api_key is set
+         raise ValueError("API key could not be decrypted or was never set.")
+    return self._plain_api_key
+
+
+@api_key.setter
+def api_key(self, plain_key: str):
+    self._plain_api_key = plain_key
+    self.encrypted_api_key = fernet_encrypt(plain_key)
+
+def __repr__(self):
+    return f"<APIKeyStore(id={self.id}, user_id={self.user_id}, service='{self.service_name}')>"
+```
+
+EOL
+print_success “Created backend/app/models/api_key_store.py.”
+
+# Now let’s create the schema files for our API
+
+# — Create backend/app/schemas/**init**.py —
+
+print_info “Creating backend/app/schemas/**init**.py…”
+cat <<EOL > backend/app/schemas/**init**.py
+from pydantic import BaseModel # For Msg schema
+
+# Import all schemas for easier access
+
+from .user import User, UserCreate, UserUpdate, UserInDB, UserPublic
+from .token import Token, TokenPayload
+from .project import Project, ProjectCreate, ProjectUpdate, ProjectInDB, ProjectSimple
+from .session_state import SessionState, SessionStateCreate, SessionStateUpdate, SessionStateInDB
+from .agent_config import AgentConfiguration, AgentConfigurationCreate, AgentConfigurationUpdate, AgentConfigurationInDB
+from .conversation import Conversation, ConversationCreate, ConversationInDB # Usually created internally
+from .message import Message, MessageCreate, MessageUpdate, MessageInDB
+from .prompt_template import PromptTemplate, PromptTemplateCreate, PromptTemplateUpdate, PromptTemplateInDB
+from .api_key_store import APIKeyStoreSchema, APIKeyStoreCreate, APIKeyStoreUpdate, APIKeyStoreInDB # If exposing API key management
+
+# Generic response for simple messages or delete operations
+
+class Msg(BaseModel):
+message: str
+
+**all** = [
+“User”, “UserCreate”, “UserUpdate”, “UserInDB”, “UserPublic”,
+“Token”, “TokenPayload”,
+“Project”, “ProjectCreate”, “ProjectUpdate”, “ProjectInDB”, “ProjectSimple”,
+“SessionState”, “SessionStateCreate”, “SessionStateUpdate”, “SessionStateInDB”,
+“AgentConfiguration”, “AgentConfigurationCreate”, “AgentConfigurationUpdate”, “AgentConfigurationInDB”,
+“Conversation”, “ConversationCreate”, “ConversationInDB”,
+“Message”, “MessageCreate”, “MessageUpdate”, “MessageInDB”,
+“PromptTemplate”, “PromptTemplateCreate”, “PromptTemplateUpdate”, “PromptTemplateInDB”,
+“APIKeyStoreSchema”, “APIKeyStoreCreate”, “APIKeyStoreUpdate”, “APIKeyStoreInDB”,
+“Msg”,
+]
+EOL
+print_success “Created backend/app/schemas/**init**.py.”
+
+# — Create backend/app/schemas/user.py —
+
+print_info “Creating backend/app/schemas/user.py…”
+cat <<EOL > backend/app/schemas/user.py
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List
+from datetime import datetime
+
+# Shared properties
+
+class UserBase(BaseModel):
+email: EmailStr
+is_active: Optional[bool] = True
+is_superuser: bool = False
+full_name: Optional[str] = Field(default=None, max_length=255)
+
+# Properties to receive via API on creation
+
+class UserCreate(UserBase):
+password: str = Field(min_length=8, max_length=100)
+
+# Properties to receive via API on update
+
+class UserUpdate(UserBase):
+password: Optional[str] = Field(default=None, min_length=8, max_length=100)
+email: Optional[EmailStr] = None # Make email updatable if needed
+full_name: Optional[str] = Field(default=None, max_length=255)
+is_active: Optional[bool] = None
+is_superuser: Optional[bool] = None
+
+# Properties shared by models stored in DB
+
+class UserInDBBase(UserBase):
+id: int
+created_at: datetime
+updated_at: datetime
+
+```
+model_config = { "from_attributes": True } # Pydantic V2 (formerly orm_mode)
+```
+
+# Additional properties to return via API (public representation of a user)
+
+class User(UserInDBBase):
+pass # Inherits all from UserInDBBase
+
+# Public user info, without sensitive details like is_superuser unless intended
+
+class UserPublic(BaseModel):
+id: int
+email: EmailStr
+full_name: Optional[str] = None
+model_config = { “from_attributes”: True }
+
+# Additional properties stored in DB (including password hash)
+
+class UserInDB(UserInDBBase):
+hashed_password: str
+EOL
+print_success “Created backend/app/schemas/user.py.”
+
+# — Create backend/app/schemas/token.py —
+
+print_info “Creating backend/app/schemas/token.py…”
+cat <<EOL > backend/app/schemas/token.py
+from pydantic import BaseModel
+from typing import Optional
+
+class Token(BaseModel):
+access_token: str
+token_type: str
+
+class TokenPayload(BaseModel):
+sub: Optional[str] = None # ‘sub’ is typically the user identifier (e.g., email or user_id)
+user_id: Optional[int] = None # Explicitly store user_id if ‘sub’ is email
+EOL
+print_success “Created backend/app/schemas/token.py.”
+
+# — Create backend/app/schemas/project.py —
+
+print_info “Creating backend/app/schemas/project.py…”
+cat <<EOL > backend/app/schemas/project.py
+from pydantic import BaseModel, Field
+from typing import Optional, List, Any
+from datetime import datetime
+from .user import UserPublic # For embedding owner info
+
+# Forward declare for circular dependencies if needed, or use TYPE_CHECKING
+
+# from .conversation import ConversationInDB
+
+# from .session_state import SessionStateInDB
+
+class ProjectBase(BaseModel):
+name: str = Field(…, min_length=3, max_length=255)
+goal: str = Field(…, min_length=10)
+status: Optional[str] = Field(default=“pending”, max_length=50)
+
+class ProjectCreate(ProjectBase):
+pass
+
+class ProjectUpdate(BaseModel): # More granular updates
+name: Optional[str] = Field(default=None, min_length=3, max_length=255)
+goal: Optional[str] = Field(default=None, min_length=10)
+status: Optional[str] = Field(default=None, max_length=50)
+selected_agent_config_ids: Optional[dict[str, int]] = None # Example for updating agent selection
+
+class ProjectInDBBase(ProjectBase):
+id: int
+owner_id: int
+created_at: datetime
+updated_at: datetime
+model_config = { “from_attributes”: True }
+
+class Project(ProjectInDBBase):
+owner: Optional[UserPublic] = None # Embed owner info
+# conversation: Optional[“ConversationInDB”] = None # Embed if needed, handle circular imports
+# session_state: Optional[“SessionStateInDB”] = None
+
+# Simplified version for lists, without full nested objects
+
+class ProjectSimple(BaseModel):
+id: int
+name: str
+status: str
+created_at: datetime
+owner_id: int
+model_config = { “from_attributes”: True }
+
+class ProjectInDB(ProjectInDBBase):
+pass # For full DB representation if different from API output
+EOL
+print_success “Created backend/app/schemas/project.py.”
+
+# — Create backend/app/schemas/session_state.py —
+
+print_info “Creating backend/app/schemas/session_state.py…”
+cat <<EOL > backend/app/schemas/session_state.py
+from pydantic import BaseModel, Field
+from typing import Optional, Any
+from datetime import datetime
+
+class SessionStateBase(BaseModel):
+current_step_info: Optional[str] = None
+current_status: str = Field(default=“initializing”, max_length=50)
+global_context: Optional[str] = None
+state_data: Optional[dict[str, Any]] = None
+last_error: Optional[str] = None
+iteration_count: int = Field(default=0, ge=0)
+
+class SessionStateCreate(SessionStateBase):
+project_id: int # Required on creation
+
+class SessionStateUpdate(BaseModel): # Granular updates
+current_step_info: Optional[str] = None
+current_status: Optional[str] = Field(default=None, max_length=50)
+global_context: Optional[str] = None
+state_data: Optional[dict[str, Any]] = None
+last_error: Optional[str] = None
+iteration_count: Optional[int] = Field(default=None, ge=0)
+
+class SessionStateInDBBase(SessionStateBase):
+id: int
+project_id: int
+created_at: datetime
+updated_at: datetime
+model_config = { “from_attributes”: True }
+
+class SessionState(SessionStateInDBBase):
+pass # API representation
+
+class SessionStateInDB(SessionStateInDBBase):
+pass # Full DB representation
+EOL
+print_success “Created backend/app/schemas/session_state.py.”
+
+# — Create backend/app/schemas/agent_config.py —
+
+print_info “Creating backend/app/schemas/agent_config.py…”
+cat <<EOL > backend/app/schemas/agent_config.py
+from pydantic import BaseModel, Field
+from typing import Optional, List, Any
+from datetime import datetime
+
+# from .prompt_template import PromptTemplate # For embedding template info
+
+class AgentConfigurationBase(BaseModel):
+name: str = Field(…, min_length=3, max_length=255)
+role: str = Field(…, min_length=3, max_length=100)
+description: Optional[str] = None
+llm_model_name: str = Field(default=“gpt-4o”, max_length=100)
+temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
+max_tokens_to_generate: Optional[int] = Field(default=None, ge=1)
+base_prompt_template_id: Optional[int] = None
+tools_config: Optional[dict[str, Any]] = None
+
+class AgentConfigurationCreate(AgentConfigurationBase):
+pass
+
+class AgentConfigurationUpdate(BaseModel): # Granular updates
+name: Optional[str] = Field(default=None, min_length=3, max_length=255)
+role: Optional[str] = Field(default=None, min_length=3, max_length=100)
+description: Optional[str] = None
+llm_model_name: Optional[str] = Field(default=None, max_length=100)
+temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
+max_tokens_to_generate: Optional[int] = Field(default=None, ge=1)
+base_prompt_template_id: Optional[int] = None # Allow unsetting
+tools_config: Optional[dict[str, Any]] = None
+
+class AgentConfigurationInDBBase(AgentConfigurationBase):
+id: int
+created_at: datetime
+updated_at: datetime
+model_config = { “from_attributes”: True }
+
+class AgentConfiguration(AgentConfigurationInDBBase):
+# base_prompt_template: Optional[PromptTemplate] = None # Embed if needed
+pass
+
+class AgentConfigurationInDB(AgentConfigurationInDBBase):
+pass
+EOL
+print_success “Created backend/app/schemas/agent_config.py.”
+
+# — Create backend/app/schemas/conversation.py —
+
+print_info “Creating backend/app/schemas/conversation.py…”
+cat <<EOL > backend/app/schemas/conversation.py
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
+from .message import Message # For embedding messages
+
+class ConversationBase(BaseModel):
+project_id: int
+# title: Optional[str] = None
+# context_summary: Optional[str] = None
+
+class ConversationCreate(ConversationBase): # Usually internal, linked to Project creation
+pass
+
+class ConversationInDBBase(ConversationBase):
+id: int
+created_at: datetime
+updated_at: datetime
+model_config = { “from_attributes”: True }
+
+class Conversation(ConversationInDBBase):
+messages: List[Message] = [] # Embed messages
+
+class ConversationInDB(ConversationInDBBase):
+pass
+EOL
+print_success “Created backend/app/schemas/conversation.py.”
+
+# — Create backend/app/schemas/message.py —
+
+print_info “Creating backend/app/schemas/message.py…”
+cat <<EOL > backend/app/schemas/message.py
+from pydantic import BaseModel, Field
+from typing import Optional, Any
+from datetime import datetime
+
+class MessageBase(BaseModel):
+sender_type: str = Field(…, max_length=50) # “user”, “agent”, “system”
+sender_name: Optional[str] = Field(default=None, max_length=100)
+content: str
+message_type: str = Field(default=“text”, max_length=50)
+metadata: Optional[dict[str, Any]] = None
+
+class MessageCreate(MessageBase):
+conversation_id: Optional[int] = None # Can be set by orchestrator or derived
+# If creating message for a specific project, orchestrator will handle conversation_id
+project_id: Optional[int] = None # Used if user posts directly to a project context
+
+class MessageUpdate(BaseModel): # Messages are often immutable, but if needed
+content: Optional[str] = None
+metadata: Optional[dict[str, Any]] = None
+
+class MessageInDBBase(MessageBase):
+id: int
+conversation_id: int
+timestamp: datetime # From model’s `timestamp` field
+created_at: datetime # From Base model
+# updated_at: datetime # If messages are mutable
+model_config = { “from_attributes”: True }
+
+class Message(MessageInDBBase):
+pass # API representation
+
+class MessageInDB(MessageInDBBase):
+pass
+EOL
+print_success “Created backend/app/schemas/message.py.”
+
+# — Create backend/app/schemas/prompt_template.py —
+
+print_info “Creating backend/app/schemas/prompt_template.py…”
+cat <<EOL > backend/app/schemas/prompt_template.py
+from pydantic import BaseModel, Field
+from typing import Optional, List, Any
+from datetime import datetime
+
+class PromptTemplateBase(BaseModel):
+name: str = Field(…, min_length=3, max_length=255)
+description: Optional[str] = None
+template_content: str
+variables: Optional[List[str]] = None
+version: str = Field(default=“1.0”, max_length=50)
+category: Optional[str] = Field(default=None, max_length=100)
+
+class PromptTemplateCreate(PromptTemplateBase):
+pass
+
+class PromptTemplateUpdate(BaseModel): # Granular updates
+name: Optional[str] = Field(default=None, min_length=3, max_length=255)
+description: Optional[str] = None
+template_content: Optional[str] = None
+variables: Optional[List[str]] = None
+version: Optional[str] = Field(default=None, max_length=50)
+category: Optional[str] = Field(default=None, max_length=100)
+
+class PromptTemplateInDBBase(PromptTemplateBase):
+id: int
+created_at: datetime
+updated_at: datetime
+model_config = { “from_attributes”: True }
+
+class PromptTemplate(PromptTemplateInDBBase):
+pass # API representation
+
+class PromptTemplateInDB(PromptTemplateInDBBase):
+pass
+EOL
+print_success “Created backend/app/schemas/prompt_template.py.”
+
+# — Create backend/app/schemas/api_key_store.py —
+
+print_info “Creating backend/app/schemas/api_key_store.py…”
+cat <<EOL > backend/app/schemas/api_key_store.py
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+class APIKeyStoreBase(BaseModel):
+service_name: str = Field(…, max_length=100) # e.g., “OPENAI”, “ANTHROPIC”
+key_scope: Optional[str] = Field(default=None, max_length=100)
+description: Optional[str] = Field(default=None, max_length=255)
+
+class APIKeyStoreCreate(APIKeyStoreBase):
+api_key: str = Field(…, min_length=10) # Plain API key for creation
+
+class APIKeyStoreUpdate(BaseModel): # Users might not update the key itself, but metadata
+service_name: Optional[str] = Field(default=None, max_length=100) # Usually not updatable
+key_scope: Optional[str] = Field(default=None, max_length=100)
+description: Optional[str] = Field(default=None, max_length=255)
+# api_key: Optional[str] = None # If key update is allowed
+
+# Schema for displaying stored keys (never shows the actual key)
+
+class APIKeyStoreSchema(APIKeyStoreBase):
+id: int
+user_id: int
+created_at: datetime
+updated_at: datetime
+# We don’t include encrypted_api_key or plain api_key here for security
+model_config = { “from_attributes”: True }
+
+class APIKeyStoreInDB(APIKeyStoreSchema): # Internal representation if needed
+encrypted_api_key: bytes # Stored in DB, not exposed
+EOL
+print_success “Created backend/app/schemas/api_key_store.py.”
+
+# Let’s now create the API endpoints
+
+# — Create backend/app/api/api.py —
+
+print_info “Creating backend/app/api/api.py…”
+cat <<EOL > backend/app/api/api.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session as SQLAlchemySession
+from typing import List
+
+from app import models, schemas
+from app.services import secure_api_key_service
+from app.core.security import get_current_active_user
+from app.db.session import get_db
+
+router = APIRouter()
+
+@router.post(”/”, response_model=schemas.APIKeyStoreSchema, status_code=status.HTTP_201_CREATED)
+async def add_user_api_key(
+*,
+db: SQLAlchemySession = Depends(get_db),
+api_key_in: schemas.APIKeyStoreCreate,
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Add or update an API key for the current user for a specific service.
+CRITICAL REQUIREMENT: Secure API Key Management & Usage (User can provide their keys)
+“””
+# Service will handle encryption and check for existing key for user/service to update.
+db_api_key = secure_api_key_service.store_user_api_key(
+db=db,
+user_id=current_user.id,
+service_name=api_key_in.service_name,
+api_key=api_key_in.api_key,
+key_scope=api_key_in.key_scope,
+description=api_key_in.description
+)
+return db_api_key
+
+@router.get(”/”, response_model=List[schemas.APIKeyStoreSchema])
+async def list_user_api_keys(
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+List all API keys registered by the current user. (Does not expose the keys themselves).
+“””
+api_keys = secure_api_key_service.get_all_user_api_key_info(db=db, user_id=current_user.id)
+return api_keys
+
+@router.get(”/{api_key_id}”, response_model=schemas.APIKeyStoreSchema)
+async def get_user_api_key_info(
+api_key_id: int,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Get metadata for a specific API key owned by the current user.
+“””
+api_key_info = secure_api_key_service.get_user_api_key_info_by_id(db=db, api_key_id=api_key_id, user_id=current_user.id)
+if not api_key_info:
+raise HTTPException(status_code=404, detail=“API key not found or not owned by user.”)
+return api_key_info
+
+@router.delete(”/{api_key_id}”, response_model=schemas.Msg)
+async def delete_user_api_key(
+api_key_id: int,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Delete an API key registered by the current user.
+“””
+success = secure_api_key_service.delete_user_api_key(db=db, api_key_id=api_key_id, user_id=current_user.id)
+if not success:
+raise HTTPException(status_code=404, detail=“API key not found or not owned by user.”)
+return {“message”: “API key deleted successfully.”}
+
+# Import endpoint modules
+
+from .api_v1.endpoints import login, users, projects, agent_configs, prompt_templates, api_keys
+
+api_router = APIRouter()
+
+# Include routers from endpoint modules
+
+api_router.include_router(login.router, tags=[“Authentication & Users Base”], prefix=”/auth”) # Combined login/register
+api_router.include_router(users.router, tags=[“Users Management”], prefix=”/users”)
+api_router.include_router(projects.router, tags=[“Projects & Collaboration”], prefix=”/projects”)
+api_router.include_router(agent_configs.router, tags=[“Agent Configurations”], prefix=”/agent-configs”)
+api_router.include_router(prompt_templates.router, tags=[“Prompt Templates”], prefix=”/prompt-templates”)
+api_router.include_router(api_keys.router, tags=[“User API Keys”], prefix=”/user-api-keys”)
+
+# Add more routers as your application grows, e.g.:
+
+# api_router.include_router(admin.router, tags=[“Admin”], prefix=”/admin”, dependencies=[Depends(get_current_active_superuser)])
+
+# api_router.include_router(utils.router, tags=[“Utilities”], prefix=”/utils”)
+
+EOL
+print_success “Created backend/app/api/api.py.”
+
+# — Create backend/app/api/api_v1/endpoints/login.py —
+
+print_info “Creating backend/app/api/api_v1/endpoints/login.py…”
+cat <<EOL > backend/app/api/api_v1/endpoints/login.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session as SQLAlchemySession # Renamed to avoid conflict
+from datetime import timedelta
+
+from app import schemas, models # Pydantic schemas, SQLAlchemy models
+from app.services import user_service # Placeholder for user service
+from app.core import security
+from app.core.config import settings
+from app.db.session import get_db
+
+router = APIRouter()
+
+@router.post(”/login/access-token”, response_model=schemas.Token)
+async def login_for_access_token(
+db: SQLAlchemySession = Depends(get_db),
+form_data: OAuth2PasswordRequestForm = Depends()
+):
+“””
+OAuth2 compatible token login, get an access token for future requests.
+CRITICAL REQUIREMENT: Unified User & Project/Session Management (Auth part)
+“””
+user = user_service.authenticate_user(db, email=form_data.username, password=form_data.password)
+if not user:
+raise HTTPException(
+status_code=status.HTTP_401_UNAUTHORIZED,
+detail=“Incorrect email or password”,
+headers={“WWW-Authenticate”: “Bearer”},
+)
+elif not user.is_active:
+raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=“Inactive user”)
+
+```
+access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+access_token = security.create_access_token(
+    subject=user.email, # Use email as subject, or user.id
+    user_id=user.id, # Explicitly pass user_id for token payload
+    expires_delta=access_token_expires
+)
+return {"access_token": access_token, "token_type": "bearer"}
+```
+
+@router.post(”/login/test-token”, response_model=schemas.UserPublic)
+async def test_token(current_user: models.User = Depends(security.get_current_active_user)):
+“””
+Test access token by returning current user’s public info.
+“””
+return current_user
+
+@router.post(”/register”, response_model=schemas.UserPublic, status_code=status.HTTP_201_CREATED)
+async def register_new_user(
+*,
+db: SQLAlchemySession = Depends(get_db),
+user_in: schemas.UserCreate,
+):
+“””
+Create new user (public registration).
+“””
+existing_user = user_service.get_user_by_email(db, email=user_in.email)
+if existing_user:
+raise HTTPException(
+status_code=status.HTTP_400_BAD_REQUEST,
+detail=“The user with this email already exists in the system.”,
+)
+user = user_service.create_user(db, obj_in=user_in)
+# Optionally, log the user in immediately by returning a token
+return user
+EOL
+print_success “Created backend/app/api/api_v1/endpoints/login.py.”
+
+# — Create backend/app/api/api_v1/endpoints/users.py —
+
+print_info “Creating backend/app/api/api_v1/endpoints/users.py…”
+cat <<EOL > backend/app/api/api_v1/endpoints/users.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session as SQLAlchemySession
+from typing import List
+
+from app import models, schemas # DB models and Pydantic schemas
+from app.services import user_service # Placeholder
+from app.core.security import get_current_active_user, get_current_active_superuser
+from app.db.session import get_db
+
+router = APIRouter()
+
+@router.get(”/me”, response_model=schemas.User) # More detailed info for ‘me’
+async def read_users_me(
+current_user: models.User = Depends(get_current_active_user)
+):
+“””
+Get current user.
+“””
+return current_user
+
+@router.put(”/me”, response_model=schemas.User)
+async def update_user_me(
+*,
+db: SQLAlchemySession = Depends(get_db),
+user_in: schemas.UserUpdate,
+current_user: models.User = Depends(get_current_active_user)
+):
+“””
+Update own user.
+“””
+user = user_service.update_user(db, db_obj=current_user, obj_in=user_in)
+return user
+
+@router.get(”/”, response_model=List[schemas.UserPublic], dependencies=[Depends(get_current_active_superuser)])
+async def read_users(
+db: SQLAlchemySession = Depends(get_db),
+skip: int = 0,
+limit: int = 100,
+):
+“””
+Retrieve users (superuser only).
+“””
+users = user_service.get_multi(db, skip=skip, limit=limit)
+return users
+
+@router.get(”/{user_id}”, response_model=schemas.UserPublic, dependencies=[Depends(get_current_active_superuser)])
+async def read_user_by_id(
+user_id: int,
+db: SQLAlchemySession = Depends(get_db),
+):
+“””
+Get a specific user by ID (superuser only).
+“””
+user = user_service.get_user(db, user_id=user_id)
+if not user:
+raise HTTPException(status_code=404, detail=“User not found”)
+return user
+
+@router.put(”/{user_id}”, response_model=schemas.User, dependencies=[Depends(get_current_active_superuser)])
+async def update_user_by_id(
+*,
+db: SQLAlchemySession = Depends(get_db),
+user_id: int,
+user_in: schemas.UserUpdate,
+):
+“””
+Update a user by ID (superuser only).
+“””
+user = user_service.get_user(db, user_id=user_id)
+if not user:
+raise HTTPException(
+status_code=404,
+detail=“The user with this username does not exist in the system”,
+)
+user = user_service.update_user(db, db_obj=user, obj_in=user_in)
+return user
+
+# Deleting users might be a soft delete (is_active=False) or hard delete.
+
+# For now, let’s assume soft delete by updating is_active via PUT.
+
+# If hard delete is needed:
+
+# @router.delete(”/{user_id}”, status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(get_current_active_superuser)])
+
+# async def delete_user(user_id: int, db: SQLAlchemySession = Depends(get_db)):
+
+# success = user_service.remove_user(db, user_id=user_id)
+
+# if not success:
+
+# raise HTTPException(status_code=404, detail=“User not found”)
+
+# return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+EOL
+print_success “Created backend/app/api/api_v1/endpoints/users.py.”
+
+# — Create backend/app/api/api_v1/endpoints/projects.py —
+
+print_info “Creating backend/app/api/api_v1/endpoints/projects.py…”
+cat <<EOL > backend/app/api/api_v1/endpoints/projects.py
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy.orm import Session as SQLAlchemySession
+from typing import List, Any
+
+from app import models, schemas
+from app.services import project_service, orchestration_service
+from app.core.security import get_current_active_user
+from app.db.session import get_db
+
+router = APIRouter()
+
+@router.post(”/”, response_model=schemas.Project, status_code=status.HTTP_201_CREATED)
+async def create_project(
+*,
+db: SQLAlchemySession = Depends(get_db),
+project_in: schemas.ProjectCreate,
+current_user: models.User = Depends(get_current_active_user),
+background_tasks: BackgroundTasks,
+):
+“””
+Create a new project.
+CRITICAL REQUIREMENT: Unified User & Project/Session Management (Project Lifecycle)
+CRITICAL REQUIREMENT: Integration Logic & Data Flow (Goal Propagation)
+“””
+project = project_service.create_with_owner(db=db, obj_in=project_in, owner_id=current_user.id)
+# Initialize project session and conversation in the background or directly
+background_tasks.add_task(orchestration_service.initialize_project_session, db=db, project_id=project.id)
+# Or, if synchronous initialization is quick and preferred:
+# await orchestration_service.initialize_project_session(db=db, project_id=project.id)
+# db.refresh(project) # Refresh to get relationships if they were created by initialize_project_session
+return project
+
+@router.get(”/{project_id}”, response_model=schemas.Project)
+async def read_project(
+project_id: int,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Get a specific project by ID.
+“””
+project = project_service.get_project_by_id_and_owner(db=db, project_id=project_id, owner_id=current_user.id, current_user=current_user)
+if not project:
+raise HTTPException(status_code=404, detail=“Project not found or not authorized”)
+return project
+
+@router.get(”/”, response_model=List[schemas.ProjectSimple]) # Use simple schema for lists
+async def read_projects(
+db: SQLAlchemySession = Depends(get_db),
+skip: int = 0,
+limit: int = 100,
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Retrieve user’s projects or all projects if superuser.
+“””
+if current_user.is_superuser:
+projects = project_service.get_multi(db, skip=skip, limit=limit)
+else:
+projects = project_service.get_multi_by_owner(
+db=db, owner_id=current_user.id, skip=skip, limit=limit
+)
+return projects
+
+@router.put(”/{project_id}”, response_model=schemas.Project)
+async def update_project(
+project_id: int,
+*,
+db: SQLAlchemySession = Depends(get_db),
+project_in: schemas.ProjectUpdate,
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Update a project.
+“””
+db_project = project_service.get_project_by_id_and_owner(db=db, project_id=project_id, owner_id=current_user.id, current_user=current_user)
+if not db_project:
+raise HTTPException(status_code=404, detail=“Project not found or not authorized to update”)
+
+```
+updated_project = project_service.update(db=db, db_obj=db_project, obj_in=project_in)
+return updated_project
+```
+
+@router.delete(”/{project_id}”, response_model=schemas.Msg)
+async def delete_project(
+project_id: int,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Delete a project.
+“””
+project_to_delete = project_service.get_project_by_id_and_owner(db=db, project_id=project_id, owner_id=current_user.id, current_user=current_user)
+if not project_to_delete:
+raise HTTPException(status_code=404, detail=“Project not found or not authorized to delete”)
+
+```
+project_service.remove(db=db, id=project_id) # This remove should handle cascade deletes if configured in models
+return {"message": "Project deleted successfully"}
+```
+
+@router.post(”/{project_id}/collaboration/start”, response_model=schemas.SessionState) # Or a more specific response
+async def start_collaboration(
+project_id: int,
+background_tasks: BackgroundTasks,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+# You might pass initial agent configurations or specific instructions here in request body
+):
+“””
+Trigger the start of the AI agent collaboration for a project.
+CRITICAL REQUIREMENT: Core Orchestration Engine (Session Control)
+CRITICAL REQUIREMENT: Minimum Viable Feedback & Control (User Intervention - start)
+“””
+project = project_service.get_project_by_id_and_owner(db=db, project_id=project_id, owner_id=current_user.id, current_user=current_user)
+if not project:
+raise HTTPException(status_code=404, detail=“Project not found or not authorized”)
+
+```
+# This would kick off the orchestration asynchronously via a background task
+# The run_collaboration_round should handle the initial step if no user_input is provided
+session_state = await orchestration_service.get_project_session_state(db=db, project_id=project.id)
+if not session_state:
+     raise HTTPException(status_code=404, detail="Project session not initialized. Call initialize first or ensure project creation does it.")
+if session_state.current_status == "agent_processing":
+    raise HTTPException(status_code=400, detail="Collaboration is already in progress.")
+
+background_tasks.add_task(orchestration_service.run_collaboration_round, db=db, project_id=project.id)
+# Return current state or an accepted message
+# For immediate feedback, we might update status to "starting" before background task
+updated_session_state = await orchestration_service.update_session_status(db, project_id, "starting_collaboration")
+
+return updated_session_state or session_state
+```
+
+@router.get(”/{project_id}/collaboration/status”, response_model=schemas.SessionState)
+async def get_collaboration_status(
+project_id: int,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Get the current status of an ongoing collaboration.
+CRITICAL REQUIREMENT: Minimum Viable Feedback & Control (Status Indicators)
+“””
+project = project_service.get_project_by_id_and_owner(db=db, project_id=project_id, owner_id=current_user.id, current_user=current_user)
+if not project: # Ensures user owns the project before getting status
+raise HTTPException(status_code=404, detail=“Project not found or not authorized”)
+
+```
+session_state = await orchestration_service.get_project_session_state(db=db, project_id=project_id)
+if not session_state:
+    raise HTTPException(status_code=404, detail="Collaboration session not found or not started.")
+return session_state
+```
+
+@router.post(”/{project_id}/collaboration/intervene”, response_model=schemas.Message)
+async def user_intervention(
+project_id: int,
+message_in: schemas.MessageCreate, # User provides feedback/new instruction
+background_tasks: BackgroundTasks,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user),
+):
+“””
+Allow user to intervene in an ongoing collaboration by sending a message.
+CRITICAL REQUIREMENT: Minimum Viable Feedback & Control (User Intervention)
+CRITICAL REQUIREMENT: Inter-Agent Communication & Context Sharing (User messages are part of this)
+“””
+project = project_service.get_project_by_id_and_owner(db=db, project_id=project_id, owner_id=current_user.id, current_user=current_user)
+if not project:
+raise HTTPException(status_code=403, detail=“Project not found or not authorized”)
+
+```
+# Add user's message to the conversation
+new_message = await orchestration_service.add_user_message_to_collaboration(
+    db=db, project_id=project_id, user_message_content=message_in.content, user_id=current_user.id
+)
+
+# Potentially trigger next round of agent processing in the background
+background_tasks.add_task(orchestration_service.run_collaboration_round, db=db, project_id=project.id, user_input_provided=True)
+
+return new_message
+```
+
+@router.get(”/{project_id}/conversation”, response_model=schemas.Conversation) # Return the full Conversation object with messages
+async def get_project_conversation(
+project_id: int,
+db: SQLAlchemySession = Depends(get_db),
+current_user: models.User = Depends(get_current_active_user)
+):
+“””
+Retrieve the full conversation history for a project.
+CRITICAL REQUIREMENT: Inter-Agent Communication & Context Sharing (access to history)
+“””
+project = project_service.get_project_by_id_and_owner(db=db, project_id=project_id, owner_id=current_user.id, current_user=current_user)
+if not project:
+raise HTTPException(status_code=404, detail=“Project not found or not authorized”)
+
+```
+conversation = await orchestration_service.get_project_conversation(db=db, project_id=project_id)
+if not conversation:
+    raise HTTPException(status_code=404, detail="Conversation not found for this project.")
+return conversation
+```
+
+EOL
+print_success “Created backend/app/api/api_v1/endpoints/projects.py.”
+
+# — Create backend/app/api/api_v1/endpoints/agent_configs.py —
+
+print_info “Creating backend/app/api/api_v1/endpoints/agent_configs.py…”
+cat <<EOL > backend/app/api/api_v1/endpoints/agent_configs.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session as SQLAlchemySession
+from typing import List
+
+from app import models, schemas
+from app.services import agent_config_service
+from app.core.security import get_current_active_user, get_current_active_superuser
+from app.db.session import get_db
+
+router = APIRouter()
+
+# Typically, agent configs might be admin-managed or user-managed with sharing.
+
+# For simplicity, let’s assume superuser can manage all, and users can view/select.
+
+# Or users can create their own private configs. This depends on product decision.
+
+@router.post(”/”, response_model=schemas.AgentConfiguration, status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_active_superuser)])
+async def create_agent_configuration(
+*,
+db: SQLAlchemySession = Depends(get_db),
+config_in: schemas.AgentConfigurationCreate,
+# current_user: models.User = Depends(get_current_active_user), # If user-specific creation
+):
+“””
+Create a new agent configuration (superuser only).
+CRITICAL REQUIREMENT: Data Persistence (Agent Configs)
+CRITICAL REQUIREMENT: Configuration Abstraction (Unified Settings for agents)
+“””
+# Check for name collision
+existing_config = agent_config_service.get_by_name(db, name=config_in.name)
+if existing_config:
+raise HTTPException(status_code=400, detail=f”Agent configuration with name ‘{config_in.name}’ already exists.”)
+
+```
+config = agent_config_service.create(db=db, obj_in=config_in)
+return config
+```
+
+@router.get(”/{config_id}”, response_model=schemas.AgentConfiguration)
+async def read_agent_configuration(
+config_id: int,
+db: SQLAlchemySession = Depends(get_db),
+# current_user: models.User = Depends(get_current_active_user), # All active users can read
+):
+“””
+Get a specific agent configuration by ID.
+“””
+config = agent_config_service.get(db=db, id=config_id)
+if not config:
+raise HTTPException(status_code=404, detail=“Agent configuration not found”)
+return config
+
+@router.get(”/”, response_model=List[schemas.AgentConfiguration])
+async def read_agent_configurations(
+db: SQLAlchemySession = Depends(get_db),
+skip: int = 0,
+limit: int = 100,
+# current_user: models.User = Depends(get_current_active_user), # All active users can list
+):
+“””
+Retrieve agent configurations.
+“””
+configs = agent_config_service.get_multi(db, skip=skip, limit=limit)
+return configs
+
+@router.put(”/{config_id}”, response_model=schemas.AgentConfiguration, dependencies=[Depends(get_current_active_superuser)])
+async def update_agent_configuration(
+config_id: int,
+*,
+db: SQLAlchemySession = Depends(get_db),
+config_in: schemas.AgentConfigurationUpdate,
+):
+“””
+Update an agent configuration (superuser only).
+“””
+db_config = agent_config_service.get(db=db, id=config_id)
+if not db_config:
+raise HTTPException(status_code=404, detail=“Agent configuration not found”)
+
+```
+# Check for name collision if name is being changed
+if config_in.name and config_in.name != db_config.name:
+    existing_config = agent_config_service.get_by_name(db, name=config_in.name)
+    if existing_config and existing_config.id != config_id:
+        raise HTTPException(status_code=400, detail=f"Agent configuration with name '{config_in.name}' already exists.")
+        
+updated_config = agent_config_service.update(db=db, db_obj=db_config, obj_in=config_in)
+return updated_config
+```
+
+@router.delete(”/{config_id}”, response_model=schemas.Msg, dependencies=[Depends(get_current_active_superuser)])
+async def delete_agent_configuration(
+config_id: int,
+db: SQLAlchemySession = Depends(get_db),
+):
+“””
+Delete an agent configuration (superuser only).
+“””
+db_config = agent_config_service.get(db=db, id=config_id)
+if not db_config:
+raise HTTPException(status_code=404, detail=“Agent configuration not found”)
+
+```
+# Consider checking if this config is in use by projects before deleting, or handle FK constraints.
+agent_config_service.remove(db=db, id=config_id)
+return {"message": "Agent configuration deleted successfully"}
+```
+
+EOL
+print_success “Created backend/app/api/api_v1/endpoints/agent_configs.py.”
+
+# — Create backend/app/api/api_v1/endpoints/prompt_templates.py —
+
+print_info “Creating backend/app/api/api_v1/endpoints/prompt_templates.py…”
+cat <<EOL > backend/app/api/api_v1/endpoints/prompt_templates.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session as SQLAlchemySession
+from typing import List
+
+from app import models, schemas
+from app.services import prompt_template_service
+from app.core.security import get_current_active_user, get_current_active_superuser
+from app.db.session import get_db
+
+router = APIRouter()
+
+@router.post(”/”, response_model=schemas.PromptTemplate, status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_active_superuser)])
+async def create_prompt_template(
+*,
+db: SQLAlchemySession = Depends(get_db),
+template_in: schemas.PromptTemplateCreate,
+):
+“””
+Create a new prompt template (superuser only).
+CRITICAL REQUIREMENT: Prompt Management & Templating System (CRUD)
+“””
+existing_template = prompt_template_service.get_by_name(db, name=template_in.name)
+if existing_template:
+raise HTTPException(status_code=400, detail=f”Prompt template with name ‘{template_in.name}’ already exists.”)
+
+```
+template = prompt_template_service.create(db=db, obj_in=template_in)
+return template
+```
+
+@router.get(”/{template_id}”, response_model=schemas.PromptTemplate)
+async def read_prompt_template(
+template_id: int,
+db: SQLAlchemySession = Depends(get_db),
+# current_user: models.User = Depends(get_current_active_user), # All active users can read
+):
+“”” Get specific prompt template. “””
+template = prompt_template_service.get(db=db, id=template_id)
+if not template:
+raise HTTPException(status_code=404, detail=“Prompt template not found”)
+return template
+
+@router.get(”/”, response_model=List[schemas.PromptTemplate])
+async def read_prompt_templates(
+db: SQLAlchemySession = Depends(get_db),
+skip: int = 0,
+limit: int = 100,
+# current_user: models.User = Depends(get_current_active_user), # All active users can list
+):
+“”” Retrieve prompt templates. “””
+templates = prompt_template_service.get_multi(db, skip=skip, limit=limit)
+return templates
+
+@router.put(”/{template_id}”, response_model=schemas.PromptTemplate, dependencies=[Depends(get_current_active_superuser)])
+async def update_prompt_template(
+template_id: int,
+*,
+db: SQLAlchemySession = Depends(get_db),
+template_in: schemas.PromptTemplateUpdate,
+):
+“”” Update a prompt template (superuser only). “””
+db_template = prompt_template_service.get(db=db, id=template_id)
+if not db_template:
+raise HTTPException(status_code=404, detail=“Prompt template not found”)
+
+```
+if template_in.name and template_in.name != db_template.name:
+    existing_template = prompt_template_service.get_by_name(db, name=template_in.name)
+    if existing_template and existing_template.id != template_id:
+        raise HTTPException(status_code=400, detail=f"Prompt template with name '{template_in.name}' already exists.")
+
+updated_template = prompt_template_service.update(db=db, db_obj=db_template, obj_in=template_in)
+return updated_template
+```
+
+@router.delete(”/{template_id}”, response_model=schemas.Msg, dependencies=[Depends(get_current_active_superuser)])
+async def delete_prompt_template(
+template_id: int,
+db: SQLAlchemySession = Depends(get_db),
+):
+“”” Delete a prompt template (superuser only). “””
+db_template = prompt_template_service.get(db=db, id=template_id)
+if not db_template:
+raise HTTPException(status_code=404, detail=“Prompt template not found”)
+
+```
+# Consider checking if template is in use by AgentConfigurations before deleting.
+prompt_template_service.remove(db=db, id=template_id)
+return {"message": "Prompt template deleted successfully"}
+```
+
+EOL
+print_success “Created backend/app/api/api_v1/endpoints/prompt_templates.py.”
+
+# — Create backend/app/api/api_v1/endpoints/api_keys.py —
+
+print_info “Creating backend/app/api/api_v1/endpoints/api_keys.py…”
+cat <<EOL > backend/app/api/api_v1/endpoints/api_keys.py
+from fastapi import APIRouter
