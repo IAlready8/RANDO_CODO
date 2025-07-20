@@ -1,0 +1,1930 @@
+#!/usr/bin/env node
+
+/**
+
+- App Development Blueprint - Project Management System
+- A complete implementation of the App Development Blueprint with agent assignments
+  */
+
+const fs = require(‘fs’);
+const path = require(‘path’);
+const chalk = require(‘chalk’);
+const inquirer = require(‘inquirer’);
+const { marked } = require(‘marked’);
+const TerminalRenderer = require(‘marked-terminal’);
+const ora = require(‘ora’);
+const Table = require(‘cli-table3’);
+const { execSync } = require(‘child_process’);
+const yaml = require(‘js-yaml’);
+
+// Configure marked with terminal renderer
+marked.setOptions({
+renderer: new TerminalRenderer()
+});
+
+// Blueprint data structure
+const blueprint = {
+name: ‘App Development Blueprint’,
+version: ‘1.0.0’,
+phases: [
+{
+name: ‘Ideation & Planning’,
+sections: [
+{
+name: ‘Concept’,
+tasks: [
+{
+name: ‘Define the problem your app will solve’,
+agent: ‘Backward Planning (Outcome Backpropagation)’,
+justification: ‘Utilizes reverse-engineering and strategic analysis to deduce required steps from the desired outcome, ensuring a well-defined problem statement.’,
+status: ‘pending’
+},
+{
+name: ‘Identify target audience and demographics’,
+agent: ‘Role-Based Filters (Perceptual Filters)’,
+justification: ‘Excels at evaluating diverse stakeholder perspectives to accurately define the target audience.’,
+status: ‘pending’
+},
+{
+name: ‘Research competitors and market trends’,
+agent: ‘Reverse Engineering Outcomes (Outcome Backpropagation)’,
+justification: ‘Leverages analytical techniques to dissect competitors' strategies and uncover market trends with precision.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Features’,
+tasks: [
+{
+name: ‘List core features (must-have functionality)’,
+agent: ‘Situational Analysis (Dynamic Framework Selection)’,
+justification: ‘Focuses on assessing the scenario to isolate the essential features critical for the app's success.’,
+status: ‘pending’
+},
+{
+name: ‘Brainstorm secondary features (nice-to-have)’,
+agent: ‘Contrarian Thinking (Strategic Blind Spots)’,
+justification: ‘Promotes creative and out-of-the-box ideation to generate additional functionality beyond the core essentials.’,
+status: ‘pending’
+},
+{
+name: ‘Prioritize features using MoSCoW (Must, Should, Could, Won't)’,
+agent: ‘Framework Integration (Dynamic Framework Selection)’,
+justification: ‘Integrates multiple methodologies to effectively structure and prioritize the feature set.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Scope & Goals’,
+tasks: [
+{
+name: ‘Set clear objectives for the app’,
+agent: ‘Backward Planning (Outcome Backpropagation)’,
+justification: ‘Aligns final outcomes with the necessary objectives through a reverse planning process.’,
+status: ‘pending’
+},
+{
+name: ‘Define success metrics (e.g., DAUs, revenue, etc.)’,
+agent: ‘Milestone Tracking (Execution Excellence)’,
+justification: ‘Specializes in setting, measuring, and tracking success metrics to ensure long-term scalability and enhanced decision clarity.’,
+status: ‘pending’
+},
+{
+name: ‘Draft a preliminary timeline and budget’,
+agent: ‘Adaptive Path Selection (Dynamic Framework Selection)’,
+justification: ‘Capable of dynamically planning and adjusting timelines and budgets based on evolving project constraints.’,
+status: ‘pending’
+}
+]
+}
+]
+},
+{
+name: ‘Design’,
+sections: [
+{
+name: ‘User Experience (UX)’,
+tasks: [
+{
+name: ‘Map user personas and their journeys’,
+agent: ‘Role-Based Filters (Perceptual Filters)’,
+justification: ‘Skillfully analyzes multiple stakeholder perspectives to create comprehensive user personas and journey maps.’,
+status: ‘pending’
+},
+{
+name: ‘Define app flow (navigation structure)’,
+agent: ‘State-Based Transitions (Dynamic Workflow Patterns)’,
+justification: ‘Expert at creating smooth transitions between different states and screens.’,
+status: ‘pending’
+},
+{
+name: ‘Create wireframes for core screens’,
+agent: ‘Iterative Feedback Loops (Execution Excellence)’,
+justification: ‘Uses cyclical feedback to progressively refine and perfect the wireframe design.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘User Interface (UI)’,
+tasks: [
+{
+name: ‘Develop a style guide (colors, typography, etc.)’,
+agent: ‘Super Words (Cognitive Enhancement Tools)’,
+justification: ‘Provides concise, high-impact guidelines that compress complex design principles into actionable directives.’,
+status: ‘pending’
+},
+{
+name: ‘Design mockups for each screen’,
+agent: ‘Multi-Framework Fusion (Meta-Level Analysis)’,
+justification: ‘Integrates best practices from diverse design frameworks to create visually striking and effective mockups.’,
+status: ‘pending’
+},
+{
+name: ‘Ensure design is consistent and accessible (e.g., WCAG standards)’,
+agent: ‘Emotional Intelligence Mapping (Advanced Cognitive Strategies)’,
+justification: ‘Focuses on empathy and user engagement, ensuring designs are both consistent and highly accessible.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Prototyping’,
+tasks: [
+{
+name: ‘Build clickable prototypes’,
+agent: ‘Dynamic Combination Methods (Advanced Integration Methods)’,
+justification: ‘Combines creative and technical methodologies to produce interactive prototypes.’,
+status: ‘pending’
+},
+{
+name: ‘Gather user feedback on prototypes’,
+agent: ‘User Feedback System (Feedback Collection)’,
+justification: ‘Specializes in efficiently collecting, analyzing, and acting on user feedback.’,
+status: ‘pending’
+},
+{
+name: ‘Iterate based on feedback’,
+agent: ‘Feedback-Based Adjustment (Dynamic Framework Selection)’,
+justification: ‘Focuses on iterative refinement by continuously integrating user insights into the design process.’,
+status: ‘pending’
+}
+]
+}
+]
+},
+{
+name: ‘Development’,
+sections: [
+{
+name: ‘Technology Stack’,
+tasks: [
+{
+name: ‘Choose platform: Native (iOS, Android) or Cross-Platform (React Native, Flutter)’,
+agent: ‘Situational Analysis (Adaptive Frameworks)’,
+justification: ‘Analyzes specific requirements to determine the optimal platform choice.’,
+status: ‘pending’
+},
+{
+name: ‘Backend: Decide on server-side technologies (e.g., Node.js, Python)’,
+agent: ‘Framework Integration Starter Kit (Advanced Integration Methods)’,
+justification: ‘Combines and integrates various backend technologies to form a robust system.’,
+status: ‘pending’
+},
+{
+name: ‘Database: Select type (SQL vs NoSQL)’,
+agent: ‘Reverse Engineering Outcomes (Outcome Backpropagation)’,
+justification: ‘Applies critical analysis to choose the best database type based on required scalability and performance.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Architecture’,
+tasks: [
+{
+name: ‘Define app architecture (MVC, MVVM, etc.)’,
+agent: ‘Backward Planning (Outcome Backpropagation)’,
+justification: ‘Uses reverse planning to determine an ideal architecture that supports long-term goals.’,
+status: ‘pending’
+},
+{
+name: ‘Plan API endpoints and integrations’,
+agent: ‘Framework Integration (Dynamic Framework Selection)’,
+justification: ‘Ensures that the integration of multiple systems is coherent and optimized.’,
+status: ‘pending’
+},
+{
+name: ‘Implement security measures (authentication, encryption, etc.)’,
+agent: ‘Stress Testing Frameworks (Strategic Blind Spots)’,
+justification: ‘Focuses on identifying and mitigating vulnerabilities under extreme conditions.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Frontend’,
+tasks: [
+{
+name: ‘Build responsive UI’,
+agent: ‘Progressive Enhancement (Execution Excellence)’,
+justification: ‘Iteratively refines the UI to achieve optimal responsiveness and user satisfaction.’,
+status: ‘pending’
+},
+{
+name: ‘Integrate animations or transitions’,
+agent: ‘State-Based Transitions (Dynamic Workflow Patterns)’,
+justification: ‘Expert in implementing smooth transitions that enhance the user experience.’,
+status: ‘pending’
+},
+{
+name: ‘Optimize for performance’,
+agent: ‘Milestone Tracking (Execution Excellence)’,
+justification: ‘Tracks critical performance metrics to ensure efficiency and speed.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Backend’,
+tasks: [
+{
+name: ‘Set up server infrastructure’,
+agent: ‘Cross-System Integration (Systems Integration)’,
+justification: ‘Integrates disparate systems to form a unified, scalable backend infrastructure.’,
+status: ‘pending’
+},
+{
+name: ‘Implement APIs and data models’,
+agent: ‘Framework Integration Starter Kit (Systems Integration)’,
+justification: ‘Provides comprehensive guidelines for robust API and data model integration.’,
+status: ‘pending’
+},
+{
+name: ‘Ensure scalability and reliability’,
+agent: ‘Feedback-Based Adjustment (Dynamic Framework Selection)’,
+justification: ‘Dynamically refines backend processes to ensure continuous scalability and reliability.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Testing’,
+tasks: [
+{
+name: ‘Unit tests for individual components’,
+agent: ‘Iterative Feedback Loops (Execution Excellence)’,
+justification: ‘Uses repeated cycles to identify and correct errors at the unit level.’,
+status: ‘pending’
+},
+{
+name: ‘Integration tests for connected systems’,
+agent: ‘Framework Integration (Systems Integration)’,
+justification: ‘Ensures that all integrated systems function harmoniously.’,
+status: ‘pending’
+},
+{
+name: ‘User acceptance testing (UAT)’,
+agent: ‘User Feedback System (Feedback Collection)’,
+justification: ‘Collects real-world feedback, ensuring the system meets user expectations.’,
+status: ‘pending’
+}
+]
+}
+]
+},
+{
+name: ‘Deployment’,
+sections: [
+{
+name: ‘Preparation’,
+tasks: [
+{
+name: ‘Obtain necessary certificates and licenses’,
+agent: ‘Version Control and Updates (Metadata and Updates)’,
+justification: ‘Tracks and ensures documentation compliance and up-to-date certification.’,
+status: ‘pending’
+},
+{
+name: ‘Set up app store accounts (Apple, Google)’,
+agent: ‘Cross-System Integration (Systems Integration)’,
+justification: ‘Effectively integrates account setups with regulatory and technical requirements.’,
+status: ‘pending’
+},
+{
+name: ‘Finalize app store assets (screenshots, description, etc.)’,
+agent: ‘Essential Frameworks for Decision-Making (Quick Start Guide)’,
+justification: ‘Uses clear frameworks to prepare and review necessary assets.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Launch’,
+tasks: [
+{
+name: ‘Deploy to app stores (App Store, Google Play)’,
+agent: ‘Dynamic Combination Methods (Advanced Integration Methods)’,
+justification: ‘Combines technical and strategic processes to ensure a smooth deployment.’,
+status: ‘pending’
+},
+{
+name: ‘Announce launch through marketing channels’,
+agent: ‘Multi-Scenario Adaptation (Advanced Integration Methods)’,
+justification: ‘Adapts messages across various channels for maximum market impact.’,
+status: ‘pending’
+},
+{
+name: ‘Monitor initial performance and feedback’,
+agent: ‘Feedback-Driven Validation Loops (Validation Techniques)’,
+justification: ‘Continuously refines strategies by integrating post-launch performance data.’,
+status: ‘pending’
+}
+]
+}
+]
+},
+{
+name: ‘Maintenance & Updates’,
+sections: [
+{
+name: ‘Monitoring’,
+tasks: [
+{
+name: ‘Track app performance (crash reports, analytics)’,
+agent: ‘Milestone Tracking (Execution Excellence)’,
+justification: ‘Ensures real-time monitoring of performance metrics.’,
+status: ‘pending’
+},
+{
+name: ‘Monitor user feedback (reviews, surveys)’,
+agent: ‘User Feedback System (Feedback Collection)’,
+justification: ‘Efficiently gathers and processes user input to guide improvements.’,
+status: ‘pending’
+},
+{
+name: ‘Regularly assess feature usage’,
+agent: ‘Feedback-Based Adjustment (Dynamic Framework Selection)’,
+justification: ‘Dynamically adjusts features based on continuous feedback.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Bug Fixes’,
+tasks: [
+{
+name: ‘Create a streamlined bug tracking process’,
+agent: ‘Iterative Feedback Loops (Execution Excellence)’,
+justification: ‘Emphasizes continuous iterations to manage and resolve issues.’,
+status: ‘pending’
+},
+{
+name: ‘Prioritize issues based on severity’,
+agent: ‘Risk Identification Workshops (Strategic Blind Spots)’,
+justification: ‘Systematically identifies and prioritizes risks based on potential impact.’,
+status: ‘pending’
+},
+{
+name: ‘Deploy regular patches’,
+agent: ‘Progressive Enhancement (Execution Excellence)’,
+justification: ‘Ensures consistent quality improvements through incremental updates.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Updates’,
+tasks: [
+{
+name: ‘Roll out new features incrementally’,
+agent: ‘Adaptive Path Selection (Dynamic Framework Selection)’,
+justification: ‘Efficiently manages updates in a controlled, dynamic environment.’,
+status: ‘pending’
+},
+{
+name: ‘Ensure backward compatibility’,
+agent: ‘Reverse Engineering Outcomes (Outcome Backpropagation)’,
+justification: ‘Analyzes previous system states to maintain compatibility.’,
+status: ‘pending’
+},
+{
+name: ‘Communicate updates to users’,
+agent: ‘Emotional Leverage (Cognitive Enhancement Tools)’,
+justification: ‘Uses emotionally intelligent communication to effectively engage users.’,
+status: ‘pending’
+}
+]
+}
+]
+},
+{
+name: ‘Core Components’,
+sections: [
+{
+name: ‘Code Management’,
+tasks: [
+{
+name: ‘Use version control (Git)’,
+agent: ‘Version Control and Updates (Metadata and Updates)’,
+justification: ‘Critical for tracking code changes and ensuring overall system integrity.’,
+status: ‘pending’
+},
+{
+name: ‘Set up branching strategy (e.g., GitFlow)’,
+agent: ‘Framework Integration Starter Kit (Systems Integration)’,
+justification: ‘Provides a structured approach to managing multiple development branches.’,
+status: ‘pending’
+},
+{
+name: ‘Conduct regular code reviews’,
+agent: ‘Feedback-Driven Validation Loops (Validation Techniques)’,
+justification: ‘Promotes continuous quality improvement through systematic reviews.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Documentation’,
+tasks: [
+{
+name: ‘Maintain clear developer documentation’,
+agent: ‘Beginner's Pathway (Integrated Learning Pathways)’,
+justification: ‘Ensures foundational practices for clear and accessible documentation.’,
+status: ‘pending’
+},
+{
+name: ‘Include API references and system diagrams’,
+agent: ‘Framework Integration (Systems Integration)’,
+justification: ‘Integrates technical details cohesively and comprehensively.’,
+status: ‘pending’
+},
+{
+name: ‘Update docs with each release’,
+agent: ‘Version Control and Updates (Metadata and Updates)’,
+justification: ‘Guarantees that documentation remains current with every system update.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Security’,
+tasks: [
+{
+name: ‘Implement secure authentication (OAuth, JWT, etc.)’,
+agent: ‘Stress Testing Frameworks (Strategic Blind Spots)’,
+justification: ‘Ensures that authentication mechanisms are rigorously tested under extreme conditions.’,
+status: ‘pending’
+},
+{
+name: ‘Conduct penetration testing’,
+agent: ‘Risk Identification Workshops (Strategic Blind Spots)’,
+justification: ‘Leverages group analysis to uncover hidden vulnerabilities.’,
+status: ‘pending’
+},
+{
+name: ‘Ensure compliance with relevant regulations (e.g., GDPR)’,
+agent: ‘Version Control and Updates (Metadata and Updates)’,
+justification: ‘Maintains up-to-date compliance documentation and version tracking.’,
+status: ‘pending’
+}
+]
+}
+]
+},
+{
+name: ‘Extended Categories’,
+sections: [
+{
+name: ‘Marketing & Monetization’,
+tasks: [
+{
+name: ‘Plan user acquisition strategies (SEO, ads, partnerships)’,
+agent: ‘Multi-Scenario Adaptation (Synergistic Frameworks)’,
+justification: ‘Adapts strategies to various market contexts, maximizing outreach.’,
+status: ‘pending’
+},
+{
+name: ‘Define monetization model (freemium, ads, in-app purchases)’,
+agent: ‘Essential Frameworks for Decision-Making (Quick Start Guide)’,
+justification: ‘Provides clear frameworks to decide on monetization based on rigorous analysis.’,
+status: ‘pending’
+},
+{
+name: ‘Analyze ROI on marketing campaigns’,
+agent: ‘Outcome-Based Metrics Reports (Custom Reports Module)’,
+justification: ‘Supplies analytical frameworks that accurately measure campaign success.’,
+status: ‘pending’
+}
+]
+},
+{
+name: ‘Legal & Compliance’,
+tasks: [
+{
+name: ‘Draft Terms of Service and Privacy Policy’,
+agent: ‘Version Control and Updates (Metadata and Updates)’,
+justification: ‘Ensures consistent and thorough documentation of legal policies.’,
+status: ‘pending’
+},
+{
+name: ‘Ensure compliance with app store guidelines’,
+agent: ‘Cross-System Integration (Systems Integration)’,
+justification: ‘Integrates regulatory details seamlessly into deployment processes.’,
+status: ‘pending’
+},
+{
+name: ‘Address intellectual property concerns’,
+agent: ‘Reverse Engineering Outcomes (Outcome Backpropagation)’,
+justification: ‘Deconstructs complex IP issues to safeguard innovation.’,
+status: ‘pending’
+}
+]
+}
+]
+}
+],
+agents: [
+{
+name: ‘Backward Planning (Outcome Backpropagation)’,
+type: ‘Strategic Planning’,
+description: ‘Utilizes reverse-engineering to determine necessary steps from desired outcomes’
+},
+{
+name: ‘Role-Based Filters (Perceptual Filters)’,
+type: ‘User Analysis’,
+description: ‘Evaluates diverse stakeholder perspectives to define audiences and user experiences’
+},
+{
+name: ‘Reverse Engineering Outcomes (Outcome Backpropagation)’,
+type: ‘Analysis’,
+description: ‘Analyzes existing solutions to understand underlying principles and strategies’
+},
+{
+name: ‘Situational Analysis (Dynamic Framework Selection)’,
+type: ‘Decision Making’,
+description: ‘Assesses scenarios to determine the most critical factors and optimal approaches’
+},
+{
+name: ‘Contrarian Thinking (Strategic Blind Spots)’,
+type: ‘Ideation’,
+description: ‘Promotes creative and out-of-the-box thinking to generate innovative solutions’
+},
+{
+name: ‘Framework Integration (Dynamic Framework Selection)’,
+type: ‘Methodology’,
+description: ‘Integrates multiple methodologies to create cohesive and optimized systems’
+},
+{
+name: ‘Milestone Tracking (Execution Excellence)’,
+type: ‘Project Management’,
+description: ‘Sets, measures, and tracks success metrics to ensure project progress’
+},
+{
+name: ‘Adaptive Path Selection (Dynamic Framework Selection)’,
+type: ‘Planning’,
+description: ‘Dynamically adjusts plans based on evolving project constraints and feedback’
+},
+{
+name: ‘State-Based Transitions (Dynamic Workflow Patterns)’,
+type: ‘UX Design’,
+description: ‘Specializes in transitions between different states and screens in applications’
+},
+{
+name: ‘Iterative Feedback Loops (Execution Excellence)’,
+type: ‘Quality Assurance’,
+description: ‘Uses cyclical feedback processes to refine and perfect designs and implementations’
+},
+{
+name: ‘Super Words (Cognitive Enhancement Tools)’,
+type: ‘Communication’,
+description: ‘Creates concise, high-impact directives and guidelines for complex principles’
+},
+{
+name: ‘Multi-Framework Fusion (Meta-Level Analysis)’,
+type: ‘Design’,
+description: ‘Combines best practices from various frameworks to create effective solutions’
+},
+{
+name: ‘Emotional Intelligence Mapping (Advanced Cognitive Strategies)’,
+type: ‘User Experience’,
+description: ‘Focuses on empathy and user engagement to create accessible, user-friendly designs’
+},
+{
+name: ‘Dynamic Combination Methods (Advanced Integration Methods)’,
+type: ‘Integration’,
+description: ‘Combines different methodologies to produce cohesive, integrated solutions’
+},
+{
+name: ‘User Feedback System (Feedback Collection)’,
+type: ‘User Research’,
+description: ‘Collects, analyzes, and acts on user feedback to guide improvements’
+},
+{
+name: ‘Feedback-Based Adjustment (Dynamic Framework Selection)’,
+type: ‘Adaptation’,
+description: ‘Continuously integrates feedback to refine and improve processes and products’
+},
+{
+name: ‘Framework Integration Starter Kit (Advanced Integration Methods)’,
+type: ‘Backend Development’,
+description: ‘Provides guidelines for integrating technologies into robust systems’
+},
+{
+name: ‘Progressive Enhancement (Execution Excellence)’,
+type: ‘Development’,
+description: ‘Incrementally builds and refines features to ensure quality and performance’
+},
+{
+name: ‘Cross-System Integration (Systems Integration)’,
+type: ‘Infrastructure’,
+description: ‘Integrates disparate systems to form unified, scalable infrastructures’
+},
+{
+name: ‘Stress Testing Frameworks (Strategic Blind Spots)’,
+type: ‘Security’,
+description: ‘Identifies and mitigates vulnerabilities under extreme conditions’
+},
+{
+name: ‘Version Control and Updates (Metadata and Updates)’,
+type: ‘Documentation’,
+description: ‘Manages version tracking and ensures documentation remains current’
+},
+{
+name: ‘Risk Identification Workshops (Strategic Blind Spots)’,
+type: ‘Risk Management’,
+description: ‘Identifies and prioritizes risks based on their potential impact’
+},
+{
+name: ‘Emotional Leverage (Cognitive Enhancement Tools)’,
+type: ‘Communication’,
+description: ‘Uses emotionally intelligent approaches to effectively engage with users’
+},
+{
+name: ‘Beginner's Pathway (Integrated Learning Pathways)’,
+type: ‘Documentation’,
+description: ‘Creates clear, accessible documentation suitable for various expertise levels’
+},
+{
+name: ‘Feedback-Driven Validation Loops (Validation Techniques)’,
+type: ‘Quality Assurance’,
+description: ‘Uses feedback to validate and improve implementations continuously’
+},
+{
+name: ‘Multi-Scenario Adaptation (Synergistic Frameworks)’,
+type: ‘Marketing’,
+description: ‘Adapts strategies to various contexts for maximum effectiveness’
+},
+{
+name: ‘Essential Frameworks for Decision-Making (Quick Start Guide)’,
+type: ‘Strategy’,
+description: ‘Provides clear frameworks for making decisions based on rigorous analysis’
+},
+{
+name: ‘Outcome-Based Metrics Reports (Custom Reports Module)’,
+type: ‘Analytics’,
+description: ‘Creates analytical frameworks to measure success against defined goals’
+},
+]
+};
+
+// Configuration
+const CONFIG_DIR = path.join(process.env.HOME, ‘.app-dev-blueprint’);
+const CONFIG_FILE = path.join(CONFIG_DIR, ‘config.json’);
+const PROJECTS_DIR = path.join(CONFIG_DIR, ‘projects’);
+const DEFAULT_CONFIG = {
+theme: ‘dark’,
+defaultProjectPath: path.join(process.env.HOME, ‘Desktop’, ‘AppDevProjects’),
+projectsHistory: []
+};
+
+// Agent colors by type for visual representation
+const agentTypeColors = {
+‘Strategic Planning’: chalk.blue,
+‘User Analysis’: chalk.green,
+‘Analysis’: chalk.yellow,
+‘Decision Making’: chalk.magenta,
+‘Ideation’: chalk.cyan,
+‘Methodology’: chalk.redBright,
+‘Project Management’: chalk.greenBright,
+‘Planning’: chalk.blueBright,
+‘UX Design’: chalk.magentaBright,
+‘Quality Assurance’: chalk.yellowBright,
+‘Communication’: chalk.cyanBright,
+‘Design’: chalk.whiteBright,
+‘User Experience’: chalk.greenBright,
+‘Integration’: chalk.blue,
+‘User Research’: chalk.green,
+‘Adaptation’: chalk.yellow,
+‘Backend Development’: chalk.magenta,
+‘Development’: chalk.cyan,
+‘Infrastructure’: chalk.redBright,
+‘Security’: chalk.white,
+‘Documentation’: chalk.blueBright,
+‘Risk Management’: chalk.magentaBright,
+‘Marketing’: chalk.yellowBright,
+‘Strategy’: chalk.cyanBright,
+‘Analytics’: chalk.greenBright
+};
+
+/**
+
+- Ensures the configuration directory exists
+  */
+  function ensureConfigDir() {
+  if (!fs.existsSync(CONFIG_DIR)) {
+  fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+
+if (!fs.existsSync(PROJECTS_DIR)) {
+fs.mkdirSync(PROJECTS_DIR, { recursive: true });
+}
+}
+
+/**
+
+- Loads or creates configuration
+  */
+  function loadConfig() {
+  ensureConfigDir();
+
+if (!fs.existsSync(CONFIG_FILE)) {
+fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
+return { …DEFAULT_CONFIG };
+}
+
+try {
+const config = JSON.parse(fs.readFileSync(CONFIG_FILE, ‘utf8’));
+return { …DEFAULT_CONFIG, …config };
+} catch (error) {
+console.error(‘Error loading config:’, error.message);
+return { …DEFAULT_CONFIG };
+}
+}
+
+/**
+
+- Saves configuration
+  */
+  function saveConfig(config) {
+  ensureConfigDir();
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  }
+
+/**
+
+- Create a new project
+  */
+  async function createProject() {
+  const config = loadConfig();
+
+const { projectName } = await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘projectName’,
+message: ‘Enter a name for your app project:’,
+validate: (input) => input.trim() !== ‘’ ? true : ‘Project name is required’
+}
+]);
+
+const { projectPath } = await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘projectPath’,
+message: ‘Enter project path (leave empty for default):’,
+default: path.join(config.defaultProjectPath, projectName)
+}
+]);
+
+// Create project directory
+const spinner = ora(‘Creating project structure…’).start();
+
+try {
+if (!fs.existsSync(projectPath)) {
+fs.mkdirSync(projectPath, { recursive: true });
+}
+
+```
+// Create project structure
+const phases = blueprint.phases.map(phase => phase.name);
+for (const phase of phases) {
+  fs.mkdirSync(path.join(projectPath, phase.replace(/\s+/g, '-')), { recursive: true });
+}
+
+// Create core directories
+['docs', 'assets', 'templates', 'config'].forEach(dir => {
+  fs.mkdirSync(path.join(projectPath, dir), { recursive: true });
+});
+
+// Save project blueprint
+const projectData = {
+  name: projectName,
+  path: projectPath,
+  created: new Date().toISOString(),
+  lastModified: new Date().toISOString(),
+  blueprint: JSON.parse(JSON.stringify(blueprint))
+};
+
+fs.writeFileSync(
+  path.join(projectPath, 'project.json'),
+  JSON.stringify(projectData, null, 2)
+);
+
+// Create README.md
+const readmeContent = `# ${projectName}\n\nApp Project based on the App Development Blueprint\n\n## Project Structure\n\n`;
+fs.writeFileSync(path.join(projectPath, 'README.md'), readmeContent);
+
+// Save to config history
+config.projectsHistory = [
+  { name: projectName, path: projectPath, lastOpened: new Date().toISOString() },
+  ...config.projectsHistory.filter(p => p.path !== projectPath).slice(0, 9)
+];
+saveConfig(config);
+
+spinner.succeed(`Project "${projectName}" created at ${projectPath}`);
+return projectPath;
+```
+
+} catch (error) {
+spinner.fail(`Failed to create project: ${error.message}`);
+throw error;
+}
+}
+
+/**
+
+- Open an existing project
+  */
+  async function openProject() {
+  const config = loadConfig();
+
+if (config.projectsHistory.length === 0) {
+console.log(chalk.yellow(‘No recent projects found. Create a new project first.’));
+return null;
+}
+
+const recentProjects = config.projectsHistory.map(p => ({
+name: `${p.name} (${p.path})`,
+value: p.path
+}));
+
+const { action } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘action’,
+message: ‘Select a project or browse:’,
+choices: [
+…recentProjects,
+{ name: ‘Browse for project…’, value: ‘browse’ }
+]
+}
+]);
+
+if (action === ‘browse’) {
+const { projectPath } = await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘projectPath’,
+message: ‘Enter the path to your project:’,
+validate: (input) => {
+if (!input.trim()) return ‘Path is required’;
+if (!fs.existsSync(input)) return ‘Path does not exist’;
+if (!fs.existsSync(path.join(input, ‘project.json’))) return ‘Not a valid project directory (missing project.json)’;
+return true;
+}
+}
+]);
+
+```
+// Update history
+try {
+  const projectData = JSON.parse(fs.readFileSync(path.join(projectPath, 'project.json'), 'utf8'));
+  config.projectsHistory = [
+    { name: projectData.name, path: projectPath, lastOpened: new Date().toISOString() },
+    ...config.projectsHistory.filter(p => p.path !== projectPath).slice(0, 9)
+  ];
+  saveConfig(config);
+} catch (error) {
+  console.error('Error updating project history:', error.message);
+}
+
+return projectPath;
+```
+
+} else {
+// Update history for selected project
+const selectedProject = config.projectsHistory.find(p => p.path === action);
+config.projectsHistory = [
+{ …selectedProject, lastOpened: new Date().toISOString() },
+…config.projectsHistory.filter(p => p.path !== action)
+];
+saveConfig(config);
+
+```
+return action;
+```
+
+}
+}
+
+/**
+
+- Display the dashboard for a project
+  */
+  async function displayDashboard(projectPath) {
+  try {
+  const projectData = JSON.parse(fs.readFileSync(path.join(projectPath, ‘project.json’), ‘utf8’));
+  
+  console.log(’\n’);
+  console.log(chalk.bold.underline(`Project Dashboard: ${projectData.name}`));
+  console.log(`Path: ${projectPath}`);
+  console.log(`Created: ${new Date(projectData.created).toLocaleDateString()}`);
+  console.log(`Last Modified: ${new Date(projectData.lastModified).toLocaleDateString()}`);
+  console.log(’\n’);
+  
+  const { section } = await inquirer.prompt([
+  {
+  type: ‘list’,
+  name: ‘section’,
+  message: ‘Select a section:’,
+  choices: [
+  ‘View Project Overview’,
+  ‘Manage Tasks’,
+  ‘Generate Reports’,
+  ‘Export Project’,
+  ‘Settings’,
+  ‘Back to Main Menu’
+  ]
+  }
+  ]);
+  
+  switch (section) {
+  case ‘View Project Overview’:
+  await viewProjectOverview(projectData);
+  return displayDashboard(projectPath);
+  case ‘Manage Tasks’:
+  await manageTasks(projectPath, projectData);
+  return displayDashboard(projectPath);
+  case ‘Generate Reports’:
+  await generateReports(projectPath, projectData);
+  return displayDashboard(projectPath);
+  case ‘Export Project’:
+  await exportProject(projectPath, projectData);
+  return displayDashboard(projectPath);
+  case ‘Settings’:
+  await projectSettings(projectPath, projectData);
+  return displayDashboard(projectPath);
+  case ‘Back to Main Menu’:
+  return;
+  }
+  } catch (error) {
+  console.error(‘Error displaying dashboard:’, error.message);
+  return;
+  }
+  }
+
+/**
+
+- View project overview
+  */
+  async function viewProjectOverview(projectData) {
+  // Count tasks by status
+  const taskCounts = {
+  total: 0,
+  pending: 0,
+  ‘in-progress’: 0,
+  completed: 0,
+  blocked: 0
+  };
+
+projectData.blueprint.phases.forEach(phase => {
+phase.sections.forEach(section => {
+section.tasks.forEach(task => {
+taskCounts.total++;
+taskCounts[task.status] = (taskCounts[task.status] || 0) + 1;
+});
+});
+});
+
+// Create a progress table
+const progressTable = new Table({
+head: [‘Phase’, ‘Total Tasks’, ‘Pending’, ‘In Progress’, ‘Completed’, ‘Blocked’, ‘Progress’]
+});
+
+projectData.blueprint.phases.forEach(phase => {
+const phaseCounts = {
+total: 0,
+pending: 0,
+‘in-progress’: 0,
+completed: 0,
+blocked: 0
+};
+
+```
+phase.sections.forEach(section => {
+  section.tasks.forEach(task => {
+    phaseCounts.total++;
+    phaseCounts[task.status] = (phaseCounts[task.status] || 0) + 1;
+  });
+});
+
+const progress = phaseCounts.total > 0 
+  ? Math.round((phaseCounts.completed / phaseCounts.total) * 100) 
+  : 0;
+
+progressTable.push([
+  phase.name,
+  phaseCounts.total,
+  phaseCounts.pending,
+  phaseCounts['in-progress'],
+  phaseCounts.completed,
+  phaseCounts.blocked,
+  `${progress}%`
+]);
+```
+
+});
+
+const overallProgress = taskCounts.total > 0
+? Math.round((taskCounts.completed / taskCounts.total) * 100)
+: 0;
+
+progressTable.push([
+chalk.bold(‘TOTAL’),
+chalk.bold(taskCounts.total),
+chalk.bold(taskCounts.pending),
+chalk.bold(taskCounts[‘in-progress’]),
+chalk.bold(taskCounts.completed),
+chalk.bold(taskCounts.blocked),
+chalk.bold(`${overallProgress}%`)
+]);
+
+console.log(’\n’);
+console.log(chalk.bold.underline(‘Project Overview’));
+console.log(progressTable.toString());
+console.log(’\n’);
+
+await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘continue’,
+message: ‘Press Enter to continue…’
+}
+]);
+}
+
+/**
+
+- Manage tasks
+  */
+  async function manageTasks(projectPath, projectData) {
+  const { phase } = await inquirer.prompt([
+  {
+  type: ‘list’,
+  name: ‘phase’,
+  message: ‘Select a phase:’,
+  choices: [
+  …projectData.blueprint.phases.map(p => p.name),
+  ‘Back to Dashboard’
+  ]
+  }
+  ]);
+
+if (phase === ‘Back to Dashboard’) return;
+
+const selectedPhase = projectData.blueprint.phases.find(p => p.name === phase);
+
+const { section } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘section’,
+message: ‘Select a section:’,
+choices: [
+…selectedPhase.sections.map(s => s.name),
+‘Back to Phases’
+]
+}
+]);
+
+if (section === ‘Back to Phases’) {
+return manageTasks(projectPath, projectData);
+}
+
+const selectedSection = selectedPhase.sections.find(s => s.name === section);
+
+const { task } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘task’,
+message: ‘Select a task:’,
+choices: [
+…selectedSection.tasks.map(t => ({
+name: `${t.name} [${t.status.toUpperCase()}]`,
+value: t.name
+})),
+‘Back to Sections’
+]
+}
+]);
+
+if (task === ‘Back to Sections’) {
+return manageTasks(projectPath, projectData);
+}
+
+const selectedTask = selectedSection.tasks.find(t => t.name === task);
+
+// Show task details and options
+console.log(’\n’);
+console.log(chalk.bold.underline(‘Task Details’));
+console.log(`Name: ${selectedTask.name}`);
+console.log(`Status: ${selectedTask.status.toUpperCase()}`);
+console.log(`Assigned Agent: ${selectedTask.agent}`);
+console.log(`Justification: ${selectedTask.justification}`);
+console.log(’\n’);
+
+const { action } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘action’,
+message: ‘Select an action:’,
+choices: [
+‘Update Status’,
+‘Add Notes’,
+‘View Agent Details’,
+‘Back to Tasks’
+]
+}
+]);
+
+if (action === ‘Back to Tasks’) {
+return manageTasks(projectPath, projectData);
+}
+
+if (action === ‘Update Status’) {
+const { newStatus } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘newStatus’,
+message: ‘Select new status:’,
+choices: [‘pending’, ‘in-progress’, ‘completed’, ‘blocked’]
+}
+]);
+
+```
+// Update task status
+selectedTask.status = newStatus;
+projectData.lastModified = new Date().toISOString();
+
+fs.writeFileSync(
+  path.join(projectPath, 'project.json'),
+  JSON.stringify(projectData, null, 2)
+);
+
+console.log(chalk.green(`Task status updated to ${newStatus.toUpperCase()}`));
+```
+
+}
+
+if (action === ‘Add Notes’) {
+const { notes } = await inquirer.prompt([
+{
+type: ‘editor’,
+name: ‘notes’,
+message: ‘Enter task notes (press Esc then Enter to save):’,
+default: selectedTask.notes || ‘’
+}
+]);
+
+```
+// Update task notes
+selectedTask.notes = notes;
+projectData.lastModified = new Date().toISOString();
+
+fs.writeFileSync(
+  path.join(projectPath, 'project.json'),
+  JSON.stringify(projectData, null, 2)
+);
+
+console.log(chalk.green('Task notes saved'));
+```
+
+}
+
+if (action === ‘View Agent Details’) {
+const agentName = selectedTask.agent;
+const agent = projectData.blueprint.agents.find(a => a.name === agentName);
+
+```
+if (agent) {
+  console.log('\n');
+  console.log(chalk.bold.underline('Agent Details'));
+  console.log(`Name: ${agent.name}`);
+  console.log(`Type: ${agent.type}`);
+  console.log(`Description: ${agent.description}`);
+  console.log('\n');
+  
+  await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'continue',
+      message: 'Press Enter to continue...'
+    }
+  ]);
+} else {
+  console.log(chalk.yellow(`Agent information for "${agentName}" not found`));
+}
+```
+
+}
+
+return manageTasks(projectPath, projectData);
+}
+
+/**
+
+- Generate reports
+  */
+  async function generateReports(projectPath, projectData) {
+  const { reportType } = await inquirer.prompt([
+  {
+  type: ‘list’,
+  name: ‘reportType’,
+  message: ‘Select report type:’,
+  choices: [
+  ‘Project Progress Report’,
+  ‘Agent Utilization Report’,
+  ‘Task Status Report’,
+  ‘Back to Dashboard’
+  ]
+  }
+  ]);
+
+if (reportType === ‘Back to Dashboard’) return;
+
+const reportsDir = path.join(projectPath, ‘reports’);
+if (!fs.existsSync(reportsDir)) {
+fs.mkdirSync(reportsDir, { recursive: true });
+}
+
+const timestamp = new Date().toISOString().replace(/:/g, ‘-’).replace(/..+/, ‘’);
+
+if (reportType === ‘Project Progress Report’) {
+const reportContent = [];
+reportContent.push(`# Project Progress Report\n`);
+reportContent.push(`Project: ${projectData.name}`);
+reportContent.push(`Generated: ${new Date().toLocaleString()}\n`);
+
+```
+reportContent.push(`## Overall Progress\n`);
+
+// Calculate overall progress
+let totalTasks = 0;
+let completedTasks = 0;
+let inProgressTasks = 0;
+let pendingTasks = 0;
+let blockedTasks = 0;
+
+projectData.blueprint.phases.forEach(phase => {
+  phase.sections.forEach(section => {
+    section.tasks.forEach(task => {
+      totalTasks++;
+      if (task.status === 'completed') completedTasks++;
+      if (task.status === 'in-progress') inProgressTasks++;
+      if (task.status === 'pending') pendingTasks++;
+      if (task.status === 'blocked') blockedTasks++;
+    });
+  });
+});
+
+const overallProgress = Math.round((completedTasks / totalTasks) * 100);
+
+reportContent.push(`- Total Tasks: ${totalTasks}`);
+reportContent.push(`- Completed: ${completedTasks} (${Math.round((completedTasks / totalTasks) * 100)}%)`);
+reportContent.push(`- In Progress: ${inProgressTasks} (${Math.round((inProgressTasks / totalTasks) * 100)}%)`);
+reportContent.push(`- Pending: ${pendingTasks} (${Math.round((pendingTasks / totalTasks) * 100)}%)`);
+reportContent.push(`- Blocked: ${blockedTasks} (${Math.round((blockedTasks / totalTasks) * 100)}%)\n`);
+
+reportContent.push(`## Progress by Phase\n`);
+
+projectData.blueprint.phases.forEach(phase => {
+  let phaseTotal = 0;
+  let phaseCompleted = 0;
+  let phaseInProgress = 0;
+  let phasePending = 0;
+  let phaseBlocked = 0;
+  
+  phase.sections.forEach(section => {
+    section.tasks.forEach(task => {
+      phaseTotal++;
+      if (task.status === 'completed') phaseCompleted++;
+      if (task.status === 'in-progress') phaseInProgress++;
+      if (task.status === 'pending') phasePending++;
+      if (task.status === 'blocked') phaseBlocked++;
+    });
+  });
+  
+  const phaseProgress = Math.round((phaseCompleted / phaseTotal) * 100);
+  
+  reportContent.push(`### ${phase.name}\n`);
+  reportContent.push(`- Progress: ${phaseProgress}%`);
+  reportContent.push(`- Completed: ${phaseCompleted}/${phaseTotal}`);
+  reportContent.push(`- In Progress: ${phaseInProgress}`);
+  reportContent.push(`- Pending: ${phasePending}`);
+  reportContent.push(`- Blocked: ${phaseBlocked}\n`);
+});
+
+const reportPath = path.join(reportsDir, `progress-report-${timestamp}.md`);
+fs.writeFileSync(reportPath, reportContent.join('\n'));
+
+console.log(chalk.green(`Project Progress Report generated at ${reportPath}`));
+```
+
+}
+
+if (reportType === ‘Agent Utilization Report’) {
+const reportContent = [];
+reportContent.push(`# Agent Utilization Report\n`);
+reportContent.push(`Project: ${projectData.name}`);
+reportContent.push(`Generated: ${new Date().toLocaleString()}\n`);
+
+```
+// Calculate agent utilization
+const agentStats = {};
+
+projectData.blueprint.phases.forEach(phase => {
+  phase.sections.forEach(section => {
+    section.tasks.forEach(task => {
+      const agentName = task.agent;
+      
+      if (!agentStats[agentName]) {
+        agentStats[agentName] = {
+          totalTasks: 0,
+          completed: 0,
+          inProgress: 0,
+          pending: 0,
+          blocked: 0
+        };
+      }
+      
+      agentStats[agentName].totalTasks++;
+      
+      if (task.status === 'completed') agentStats[agentName].completed++;
+      if (task.status === 'in-progress') agentStats[agentName].inProgress++;
+      if (task.status === 'pending') agentStats[agentName].pending++;
+      if (task.status === 'blocked') agentStats[agentName].blocked++;
+    });
+  });
+});
+
+reportContent.push(`## Agent Utilization\n`);
+
+for (const [agentName, stats] of Object.entries(agentStats)) {
+  const agent = projectData.blueprint.agents.find(a => a.name === agentName);
+  const completion = Math.round((stats.completed / stats.totalTasks) * 100);
+  
+  reportContent.push(`### ${agentName}\n`);
+  reportContent.push(`Type: ${agent ? agent.type : 'Unknown'}`);
+  reportContent.push(`Description: ${agent ? agent.description : 'Unknown'}\n`);
+  reportContent.push(`- Total Tasks: ${stats.totalTasks}`);
+  reportContent.push(`- Completed: ${stats.completed} (${Math.round((stats.completed / stats.totalTasks) * 100)}%)`);
+  reportContent.push(`- In Progress: ${stats.inProgress}`);
+  reportContent.push(`- Pending: ${stats.pending}`);
+  reportContent.push(`- Blocked: ${stats.blocked}\n`);
+}
+
+const reportPath = path.join(reportsDir, `agent-utilization-${timestamp}.md`);
+fs.writeFileSync(reportPath, reportContent.join('\n'));
+
+console.log(chalk.green(`Agent Utilization Report generated at ${reportPath}`));
+```
+
+}
+
+if (reportType === ‘Task Status Report’) {
+const reportContent = [];
+reportContent.push(`# Task Status Report\n`);
+reportContent.push(`Project: ${projectData.name}`);
+reportContent.push(`Generated: ${new Date().toLocaleString()}\n`);
+
+```
+reportContent.push(`## Tasks by Status\n`);
+
+// List tasks by status
+reportContent.push(`### Completed Tasks\n`);
+projectData.blueprint.phases.forEach(phase => {
+  phase.sections.forEach(section => {
+    section.tasks.forEach(task => {
+      if (task.status === 'completed') {
+        reportContent.push(`- [${phase.name} > ${section.name}] ${task.name}`);
+      }
+    });
+  });
+});
+
+reportContent.push(`\n### In Progress Tasks\n`);
+projectData.blueprint.phases.forEach(phase => {
+  phase.sections.forEach(section => {
+    section.tasks.forEach(task => {
+      if (task.status === 'in-progress') {
+        reportContent.push(`- [${phase.name} > ${section.name}] ${task.name}`);
+      }
+    });
+  });
+});
+
+reportContent.push(`\n### Pending Tasks\n`);
+projectData.blueprint.phases.forEach(phase => {
+  phase.sections.forEach(section => {
+    section.tasks.forEach(task => {
+      if (task.status === 'pending') {
+        reportContent.push(`- [${phase.name} > ${section.name}] ${task.name}`);
+      }
+    });
+  });
+});
+
+reportContent.push(`\n### Blocked Tasks\n`);
+projectData.blueprint.phases.forEach(phase => {
+  phase.sections.forEach(section => {
+    section.tasks.forEach(task => {
+      if (task.status === 'blocked') {
+        reportContent.push(`- [${phase.name} > ${section.name}] ${task.name}`);
+      }
+    });
+  });
+});
+
+const reportPath = path.join(reportsDir, `task-status-${timestamp}.md`);
+fs.writeFileSync(reportPath, reportContent.join('\n'));
+
+console.log(chalk.green(`Task Status Report generated at ${reportPath}`));
+```
+
+}
+
+await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘continue’,
+message: ‘Press Enter to continue…’
+}
+]);
+
+return generateReports(projectPath, projectData);
+}
+
+/**
+
+- Export project
+  */
+  async function exportProject(projectPath, projectData) {
+  const { exportType } = await inquirer.prompt([
+  {
+  type: ‘list’,
+  name: ‘exportType’,
+  message: ‘Select export format:’,
+  choices: [
+  ‘Markdown’,
+  ‘JSON’,
+  ‘YAML’,
+  ‘Back to Dashboard’
+  ]
+  }
+  ]);
+
+if (exportType === ‘Back to Dashboard’) return;
+
+const exportsDir = path.join(projectPath, ‘exports’);
+if (!fs.existsSync(exportsDir)) {
+fs.mkdirSync(exportsDir, { recursive: true });
+}
+
+const timestamp = new Date().toISOString().replace(/:/g, ‘-’).replace(/..+/, ‘’);
+let exportPath;
+
+if (exportType === ‘Markdown’) {
+const markdownContent = [];
+markdownContent.push(`# ${projectData.name}\n`);
+markdownContent.push(`Generated: ${new Date().toLocaleString()}\n`);
+
+```
+projectData.blueprint.phases.forEach(phase => {
+  markdownContent.push(`## ${phase.name}\n`);
+  
+  phase.sections.forEach(section => {
+    markdownContent.push(`### ${section.name}\n`);
+    
+    section.tasks.forEach(task => {
+      markdownContent.push(`#### ${task.name}`);
+      markdownContent.push(`- **Status:** ${task.status.toUpperCase()}`);
+      markdownContent.push(`- **Agent:** ${task.agent}`);
+      markdownContent.push(`- **Justification:** ${task.justification}`);
+      
+      if (task.notes) {
+        markdownContent.push(`- **Notes:**\n\n${task.notes}\n`);
+      }
+      
+      markdownContent.push('');
+    });
+  });
+});
+
+exportPath = path.join(exportsDir, `${projectData.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp}.md`);
+fs.writeFileSync(exportPath, markdownContent.join('\n'));
+```
+
+} else if (exportType === ‘JSON’) {
+exportPath = path.join(exportsDir, `${projectData.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp}.json`);
+fs.writeFileSync(exportPath, JSON.stringify(projectData, null, 2));
+} else if (exportType === ‘YAML’) {
+exportPath = path.join(exportsDir, `${projectData.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp}.yaml`);
+fs.writeFileSync(exportPath, yaml.dump(projectData));
+}
+
+console.log(chalk.green(`Project exported to ${exportPath}`));
+
+await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘continue’,
+message: ‘Press Enter to continue…’
+}
+]);
+}
+
+/**
+
+- Project settings
+  */
+  async function projectSettings(projectPath, projectData) {
+  const { action } = await inquirer.prompt([
+  {
+  type: ‘list’,
+  name: ‘action’,
+  message: ‘Project Settings:’,
+  choices: [
+  ‘Rename Project’,
+  ‘Edit Project Description’,
+  ‘Customize Agents’,
+  ‘Reset Task Statuses’,
+  ‘Back to Dashboard’
+  ]
+  }
+  ]);
+
+if (action === ‘Back to Dashboard’) return;
+
+if (action === ‘Rename Project’) {
+const { newName } = await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘newName’,
+message: ‘Enter new project name:’,
+default: projectData.name,
+validate: (input) => input.trim() !== ‘’ ? true : ‘Project name is required’
+}
+]);
+
+```
+projectData.name = newName;
+projectData.lastModified = new Date().toISOString();
+
+fs.writeFileSync(
+  path.join(projectPath, 'project.json'),
+  JSON.stringify(projectData, null, 2)
+);
+
+// Update in config history
+const config = loadConfig();
+const projectIndex = config.projectsHistory.findIndex(p => p.path === projectPath);
+if (projectIndex >= 0) {
+  config.projectsHistory[projectIndex].name = newName;
+  saveConfig(config);
+}
+
+console.log(chalk.green(`Project renamed to "${newName}"`));
+```
+
+}
+
+if (action === ‘Edit Project Description’) {
+const { description } = await inquirer.prompt([
+{
+type: ‘editor’,
+name: ‘description’,
+message: ‘Edit project description (press Esc then Enter to save):’,
+default: projectData.description || ‘’
+}
+]);
+
+```
+projectData.description = description;
+projectData.lastModified = new Date().toISOString();
+
+fs.writeFileSync(
+  path.join(projectPath, 'project.json'),
+  JSON.stringify(projectData, null, 2)
+);
+
+console.log(chalk.green('Project description updated'));
+```
+
+}
+
+if (action === ‘Customize Agents’) {
+const { agent } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘agent’,
+message: ‘Select an agent to customize:’,
+choices: [
+…projectData.blueprint.agents.map(a => a.name),
+‘Back to Settings’
+]
+}
+]);
+
+```
+if (agent === 'Back to Settings') {
+  return projectSettings(projectPath, projectData);
+}
+
+const selectedAgent = projectData.blueprint.agents.find(a => a.name === agent);
+
+const { field } = await inquirer.prompt([
+  {
+    type: 'list',
+    name: 'field',
+    message: 'What would you like to edit?',
+    choices: [
+      'Description',
+      'Type',
+      'Back to Agent Selection'
+    ]
+  }
+]);
+
+if (field === 'Back to Agent Selection') {
+  return projectSettings(projectPath, projectData);
+}
+
+if (field === 'Description') {
+  const { newDescription } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'newDescription',
+      message: 'Enter new description:',
+      default: selectedAgent.description
+    }
+  ]);
+  
+  selectedAgent.description = newDescription;
+}
+
+if (field === 'Type') {
+  const { newType } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'newType',
+      message: 'Enter new type:',
+      default: selectedAgent.type
+    }
+  ]);
+  
+  selectedAgent.type = newType;
+}
+
+projectData.lastModified = new Date().toISOString();
+
+fs.writeFileSync(
+  path.join(projectPath, 'project.json'),
+  JSON.stringify(projectData, null, 2)
+);
+
+console.log(chalk.green(`Agent "${agent}" updated`));
+
+return projectSettings(projectPath, projectData);
+```
+
+}
+
+if (action === ‘Reset Task Statuses’) {
+const { confirm } = await inquirer.prompt([
+{
+type: ‘confirm’,
+name: ‘confirm’,
+message: ‘Are you sure you want to reset all task statuses to “pending”?’,
+default: false
+}
+]);
+
+```
+if (confirm) {
+  projectData.blueprint.phases.forEach(phase => {
+    phase.sections.forEach(section => {
+      section.tasks.forEach(task => {
+        task.status = 'pending';
+      });
+    });
+  });
+  
+  projectData.lastModified = new Date().toISOString();
+  
+  fs.writeFileSync(
+    path.join(projectPath, 'project.json'),
+    JSON.stringify(projectData, null, 2)
+  );
+  
+  console.log(chalk.green('All task statuses reset to "pending"'));
+}
+```
+
+}
+
+await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘continue’,
+message: ‘Press Enter to continue…’
+}
+]);
+
+return projectSettings(projectPath, projectData);
+}
+
+/**
+
+- Main application entry point
+  */
+  async function main() {
+  console.log(chalk.bold.blue(’\n=== App Development Blueprint - Project Management System ===\n’));
+
+let running = true;
+
+while (running) {
+const { action } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘action’,
+message: ‘Select an action:’,
+choices: [
+‘Create New Project’,
+‘Open Existing Project’,
+‘Settings’,
+‘About’,
+‘Exit’
+]
+}
+]);
+
+```
+switch (action) {
+  case 'Create New Project':
+    try {
+      const projectPath = await createProject();
+      if (projectPath) {
+        await displayDashboard(projectPath);
+      }
+    } catch (error) {
+      console.error('Error creating project:', error.message);
+    }
+    break;
+    
+  case 'Open Existing Project':
+    try {
+      const projectPath = await openProject();
+      if (projectPath) {
+        await displayDashboard(projectPath);
+      }
+    } catch (error) {
+      console.error('Error opening project:', error.message);
+    }
+    break;
+    
+  case 'Settings':
+    await manageSettings();
+    break;
+    
+  case 'About':
+    displayAbout();
+    break;
+    
+  case 'Exit':
+    console.log(chalk.green('Goodbye!'));
+    running = false;
+    break;
+}
+```
+
+}
+}
+
+/**
+
+- Manage application settings
+  */
+  async function manageSettings() {
+  const config = loadConfig();
+
+const { setting } = await inquirer.prompt([
+{
+type: ‘list’,
+name: ‘setting’,
+message: ‘Select a setting to modify:’,
+choices: [
+‘Default Project Path’,
+‘Clear Project History’,
+‘Back to Main Menu’
+]
+}
+]);
+
+if (setting === ‘Back to Main Menu’) return;
+
+if (setting === ‘Default Project Path’) {
+const { newPath } = await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘newPath’,
+message: ‘Enter new default path for projects:’,
+default: config.defaultProjectPath
+}
+]);
+
+```
+config.defaultProjectPath = newPath;
+saveConfig(config);
+
+console.log(chalk.green(`Default project path updated to: ${newPath}`));
+```
+
+}
+
+if (setting === ‘Clear Project History’) {
+const { confirm } = await inquirer.prompt([
+{
+type: ‘confirm’,
+name: ‘confirm’,
+message: ‘Are you sure you want to clear your project history?’,
+default: false
+}
+]);
+
+```
+if (confirm) {
+  config.projectsHistory = [];
+  saveConfig(config);
+  
+  console.log(chalk.green('Project history cleared'));
+}
+```
+
+}
+
+await inquirer.prompt([
+{
+type: ‘input’,
+name: ‘continue’,
+message: ‘Press Enter to continue…’
+}
+]);
+}
+
+/**
+
+- Display about information
+  */
+  function displayAbout() {
+  console.log(chalk.bold.blue(’\nApp Development Blueprint - Project Management System\n’));
+  console.log(‘Version: 1.0.0’);
+  console.log(‘A comprehensive project management tool for app development projects’);
+  console.log(‘based on the App Development Blueprint with assigned agents.\n’);
+
+inquirer.prompt([
+{
+type: ‘input’,
+name: ‘continue’,
+message: ‘Press Enter to continue…’
+}
+]);
+}
+
+/**
+
+- Check if the script is being executed directly
+  */
+  if (require.main === module) {
+  main().catch(error => {
+  console.error(‘An error occurred:’, error);
+  process.exit(1);
+  });
+  }
+
+module.exports = {
+blueprint,
+createProject,
+openProject,
+displayDashboard
+};
