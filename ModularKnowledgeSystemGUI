@@ -783,4 +783,738 @@ def _create_framework_tab(self):
         command=self._update_framework_list
     )
     refresh_frameworks_button.pack(side=tk.LEFT, padx=5)
+    
+    # Framework description (with scrollable text for long descriptions)
+    desc_frame = ttk.Frame(input_frame)
+    desc_frame.pack(fill=tk.X, pady=5)
+    
+    ttk.Label(desc_frame, text="Description:").pack(anchor=tk.W)
+    
+    self.framework_desc_text = scrolledtext.ScrolledText(
+        desc_frame,
+        height=3,
+        wrap=tk.WORD,
+        font=("Arial", 9),
+        state=tk.DISABLED
+    )
+    self.framework_desc_text.pack(fill=tk.X, pady=5)
+    
+    # Update description when framework selected - use more efficient binding
+    self.framework_combo.bind(
+        "<<ComboboxSelected>>", 
+        lambda e: self.after(10, self._update_framework_description)
+    )
+    
+    # Query input
+    ttk.Label(input_frame, text="Query:").pack(anchor=tk.W, pady=(10, 0))
+    
+    self.framework_query_entry = ttk.Entry(input_frame, width=TEXT_WIDTH)
+    self.framework_query_entry.pack(fill=tk.X, pady=5)
+    
+    # Add keyboard shortcut
+    self.framework_query_entry.bind("<Return>", lambda e: self._get_framework_recommendation())
+    
+    # Buttons
+    buttons_frame = ttk.Frame(input_frame)
+    buttons_frame.pack(fill=tk.X, pady=10)
+    
+    get_button = ttk.Button(
+        buttons_frame, 
+        text="Get Framework-Specific Recommendation", 
+        command=self._get_framework_recommendation
+    )
+    get_button.pack(side=tk.LEFT, padx=5)
+    
+    clear_button = ttk.Button(
+        buttons_frame, 
+        text="Clear", 
+        command=lambda: (self.framework_query_entry.delete(0, tk.END), self._clear_results())
+    )
+    clear_button.pack(side=tk.LEFT, padx=5)
+    
+    save_button = ttk.Button(
+        buttons_frame, 
+        text="Save Results", 
+        command=self._save_results
+    )
+    save_button.pack(side=tk.LEFT, padx=5)
+    
+    # Results area with optimized scrolling
+    results_frame = ttk.LabelFrame(framework_frame, text="Results")
+    results_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+    
+    self.framework_results_text = scrolledtext.ScrolledText(
+        results_frame, 
+        wrap=tk.WORD,
+        height=20,
+        state=tk.DISABLED
+    )
+    self.framework_results_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    # Buffered text for framework results
+    self.framework_results_buffer = BufferedText(self.framework_results_text)
+    
+    # If system is already initialized, update the framework list
+    if self.system is not None:
+        self._update_framework_list()
+
+def _create_visualization_tab(self):
+    """Create the visualization tab for knowledge graph."""
+    viz_frame = ttk.Frame(self.notebook)
+    self.notebook.add(viz_frame, text="Visualization")
+    self._tab_frames["Visualization"] = viz_frame
+    
+    # Title and description
+    title_label = ttk.Label(
+        viz_frame, 
+        text="Knowledge Graph Visualization", 
+        style="Header.TLabel"
+    )
+    title_label.pack(pady=(20, 5))
+    
+    description_label = ttk.Label(
+        viz_frame,
+        text="Visualize the relationships between different domains and concepts in the knowledge base.",
+        wraplength=600
+    )
+    description_label.pack(pady=(0, 20))
+    
+    # Controls frame with expanded options for visualization
+    controls_frame = ttk.Frame(viz_frame)
+    controls_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    # Left side buttons
+    left_buttons = ttk.Frame(controls_frame)
+    left_buttons.pack(side=tk.LEFT, fill=tk.Y)
+    
+    generate_button = ttk.Button(
+        left_buttons, 
+        text="Generate Visualization", 
+        command=self._generate_knowledge_graph
+    )
+    generate_button.pack(side=tk.LEFT, padx=5)
+    
+    save_viz_button = ttk.Button(
+        left_buttons, 
+        text="Save Visualization", 
+        command=self._save_visualization
+    )
+    save_viz_button.pack(side=tk.LEFT, padx=5)
+    
+    # Visualization options
+    viz_options = ttk.LabelFrame(controls_frame, text="Display Options")
+    viz_options.pack(side=tk.RIGHT, fill=tk.Y, padx=5)
+    
+    # Node size slider
+    self.node_size_var = tk.IntVar(value=500)
+    ttk.Label(viz_options, text="Node Size:").pack(side=tk.LEFT, padx=5)
+    node_size_scale = ttk.Scale(
+        viz_options,
+        from_=200,
+        to=1000,
+        orient=tk.HORIZONTAL,
+        variable=self.node_size_var,
+        length=150
+    )
+    node_size_scale.pack(side=tk.LEFT, padx=5)
+    
+    # Graph display frame with resizable canvas
+    self.graph_frame = ttk.LabelFrame(viz_frame, text="Knowledge Graph")
+    self.graph_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+    
+    # Placeholder text
+    self.graph_placeholder = ttk.Label(
+        self.graph_frame,
+        text="Click 'Generate Visualization' to display the knowledge graph.",
+        font=("Arial", 12),
+        justify=tk.CENTER
+    )
+    self.graph_placeholder.pack(fill=tk.BOTH, expand=True)
+
+def _create_settings_tab(self):
+    """Create the settings tab with optimized widgets."""
+    settings_frame = ttk.Frame(self.notebook)
+    self.notebook.add(settings_frame, text="Settings")
+    self._tab_frames["Settings"] = settings_frame
+    
+    # Title
+    title_label = ttk.Label(
+        settings_frame, 
+        text="Settings & Configuration", 
+        style="Header.TLabel"
+    )
+    title_label.pack(pady=(20, 5))
+    
+    # Create a notebook for settings categories
+    settings_notebook = ttk.Notebook(settings_frame)
+    settings_notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+    
+    # Output settings tab
+    output_tab = ttk.Frame(settings_notebook)
+    settings_notebook.add(output_tab, text="Output")
+    
+    # Output directory settings
+    output_frame = ttk.LabelFrame(output_tab, text="Output Directory")
+    output_frame.pack(fill=tk.X, padx=10, pady=10)
+    
+    output_path_frame = ttk.Frame(output_frame)
+    output_path_frame.pack(fill=tk.X, pady=5, padx=5)
+    
+    ttk.Label(output_path_frame, text="Output Directory:").pack(side=tk.LEFT, padx=(0, 5))
+    
+    self.output_path_var = tk.StringVar()
+    self.output_path_var.set(str(self.output_dir))
+    
+    output_path_entry = ttk.Entry(
+        output_path_frame, 
+        textvariable=self.output_path_var,
+        width=60
+    )
+    output_path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    
+    browse_button = ttk.Button(
+        output_path_frame, 
+        text="Browse...", 
+        command=self._browse_output_dir
+    )
+    browse_button.pack(side=tk.LEFT, padx=5)
+    
+    apply_button = ttk.Button(
+        output_frame, 
+        text="Apply", 
+        command=self._apply_output_dir
+    )
+    apply_button.pack(anchor=tk.W, pady=5, padx=5)
+    
+    # System tab
+    system_tab = ttk.Frame(settings_notebook)
+    settings_notebook.add(system_tab, text="System")
+    
+    # System actions
+    system_frame = ttk.LabelFrame(system_tab, text="System Actions")
+    system_frame.pack(fill=tk.X, padx=10, pady=10)
+    
+    reinit_button = ttk.Button(
+        system_frame, 
+        text="Reinitialize System", 
+        command=self._initialize_system_threaded
+    )
+    reinit_button.pack(anchor=tk.W, pady=5, padx=5)
+    
+    # Performance optimization settings
+    perf_frame = ttk.LabelFrame(system_tab, text="Performance")
+    perf_frame.pack(fill=tk.X, padx=10, pady=10)
+    
+    # Cache control
+    self.use_cache_var = tk.BooleanVar(value=True)
+    cache_check = ttk.Checkbutton(
+        perf_frame,
+        text="Use result caching for faster responses",
+        variable=self.use_cache_var
+    )
+    cache_check.pack(anchor=tk.W, pady=5, padx=5)
+    
+    # Thread pool size
+    thread_frame = ttk.Frame(perf_frame)
+    thread_frame.pack(fill=tk.X, pady=5, padx=5)
+    
+    ttk.Label(thread_frame, text="Worker Threads:").pack(side=tk.LEFT, padx=(0, 5))
+    
+    self.thread_count_var = tk.IntVar(value=4)
+    thread_spin = ttk.Spinbox(
+        thread_frame,
+        from_=1,
+        to=8,
+        textvariable=self.thread_count_var,
+        width=5
+    )
+    thread_spin.pack(side=tk.LEFT, padx=5)
+    
+    ttk.Label(thread_frame, 
+             text="(Changes apply after restarting the application)").pack(side=tk.LEFT, padx=5)
+    
+    # About tab
+    about_tab = ttk.Frame(settings_notebook)
+    settings_notebook.add(about_tab, text="About")
+    
+    # About information
+    about_frame = ttk.LabelFrame(about_tab, text="About")
+    about_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    
+    about_text = """Modular Knowledge System v0.1.0
+```
+
+A comprehensive system that connects specialized knowledge with
+top general problem-solving frameworks to create tailored
+context-specific guidance for specific challenges.
+
+This application provides both a GUI and CLI interface.
+“””
+
+```
+    about_label = ttk.Label(
+        about_frame, 
+        text=about_text,
+        justify=tk.LEFT,
+        wraplength=700
+    )
+    about_label.pack(pady=10, padx=10, anchor=tk.W)
+    
+    # Launch CLI button
+    ttk.Button(
+        about_frame, 
+        text="Launch Command Line Interface", 
+        command=self._launch_cli
+    ).pack(pady=5, padx=10, anchor=tk.W)
+
+@performance_monitor
+def _initialize_system_threaded(self):
+    """Initialize the system in a background thread with progress indication."""
+    # Prevent multiple initialization attempts
+    if self._operations_counter.get() > 0:
+        return
+        
+    if self.system is not None:
+        response = messagebox.askyesno(
+            "Reinitialize System", 
+            "System is already initialized. Reinitialize?"
+        )
+        if not response:
+            return
+    
+    self.system_status_var.set("Initializing...")
+    self.status_var.set("Initializing system...")
+    
+    # Disable navigation during initialization
+    self.notebook.config(state=tk.DISABLED)
+    
+    # Increment operations counter
+    self._operations_counter.increment()
+    
+    # Use thread pool for background work
+    self.thread_pool.submit(
+        self._initialize_system_task,
+        self._initialize_system_callback
+    )
+
+def _initialize_system_task(self):
+    """Task function for system initialization."""
+    try:
+        print("Initializing Modular Knowledge System...")
+        system = ModularKnowledgeSystem()
+        print("System initialized successfully!")
+        return {"success": True, "system": system}
+    except Exception as e:
+        error_msg = f"Error initializing system: {str(e)}"
+        print(error_msg)
+        return {"success": False, "error": error_msg}
+
+def _initialize_system_callback(self, result):
+    """Callback function when initialization is complete."""
+    if result["success"]:
+        self.system = result["system"]
+        
+        # Update domain and framework lists
+        self._update_domain_list()
+        self._update_framework_list()
+        
+        # Update status
+        self.system_status_var.set("Initialized")
+        self.status_var.set("System initialized successfully")
+    else:
+        self.system_status_var.set("Initialization failed")
+        self.status_var.set(result["error"])
+        messagebox.showerror("Initialization Error", result["error"])
+    
+    # Re-enable navigation
+    self.after(0, lambda: self.notebook.config(state=tk.NORMAL))
+    
+    # Decrement operations counter
+    self._operations_counter.decrement()
+
+@performance_monitor
+def _update_domain_list(self):
+    """Update the list of available domains with efficient caching."""
+    if self.system is None:
+        messagebox.showwarning("Not Initialized", "System is not initialized.")
+        return
+    
+    # Show loading indicator
+    prev_status = self.status_var.get()
+    self.status_var.set("Retrieving domains...")
+    
+    try:
+        # Get domains
+        self.domains = self.system.get_all_domains()
+        
+        # Sort domains by name for better UX
+        self.domains.sort(key=lambda d: d['name'])
+        
+        # Update domain dropdown
+        domain_items = [f"{domain['name']} ({domain['id']})" for domain in self.domains]
+        
+        # Update UI if the combo exists
+        if hasattr(self, 'domain_combo'):
+            self.domain_combo['values'] = domain_items
+            
+            if domain_items:
+                self.domain_combo.current(0)
+        
+        print(f"Retrieved {len(self.domains)} domains.")
+        self.status_var.set(f"Retrieved {len(self.domains)} domains")
+    except Exception as e:
+        error_msg = f"Error retrieving domains: {str(e)}"
+        print(error_msg)
+        self.status_var.set(error_msg)
+        messagebox.showerror("Error", error_msg)
+    finally:
+        # Restore status after a delay
+        self.after(2000, lambda: self.status_var.set(prev_status))
+
+@performance_monitor
+def _update_framework_list(self):
+    """Update the list of available frameworks with efficient caching."""
+    if self.system is None:
+        messagebox.showwarning("Not Initialized", "System is not initialized.")
+        return
+    
+    # Show loading indicator
+    prev_status = self.status_var.get()
+    self.status_var.set("Retrieving frameworks...")
+    
+    try:
+        # Get frameworks
+        self.frameworks = self.system.get_all_frameworks()
+        
+        # Sort frameworks by name for better UX
+        self.frameworks.sort(key=lambda f: f['name'])
+        
+        # Update framework dropdown if it exists
+        if hasattr(self, 'framework_combo'):
+            framework_items = [f"{framework['name']} ({framework['key']})" for framework in self.frameworks]
+            self.framework_combo['values'] = framework_items
+            
+            if framework_items:
+                self.framework_combo.current(0)
+                self._update_framework_description()
+        
+        print(f"Retrieved {len(self.frameworks)} frameworks.")
+        self.status_var.set(f"Retrieved {len(self.frameworks)} frameworks")
+    except Exception as e:
+        error_msg = f"Error retrieving frameworks: {str(e)}"
+        print(error_msg)
+        self.status_var.set(error_msg)
+        messagebox.showerror("Error", error_msg)
+    finally:
+        # Restore status after a delay
+        self.after(2000, lambda: self.status_var.set(prev_status))
+
+def _update_framework_description(self):
+    """Update the framework description when a framework is selected."""
+    if not hasattr(self, 'framework_desc_text') or not self.frameworks:
+        return
+    
+    try:
+        selected_idx = self.framework_combo.current()
+        if selected_idx >= 0:
+            framework = self.frameworks[selected_idx]
+            desc = framework.get('description', 'No description available.')
+            steps = ", ".join(framework.get('steps', []))
+            
+            # Update text widget more efficiently
+            self.framework_desc_text.config(state=tk.NORMAL)
+            self.framework_desc_text.delete(1.0, tk.END)
+            self.framework_desc_text.insert(tk.END, f"Description: {desc}\n\nSteps: {steps}")
+            self.framework_desc_text.config(state=tk.DISABLED)
+    except Exception as e:
+        # Handle errors gracefully
+        if hasattr(self, 'framework_desc_text'):
+            self.framework_desc_text.config(state=tk.NORMAL)
+            self.framework_desc_text.delete(1.0, tk.END)
+            self.framework_desc_text.insert(tk.END, f"Error: {str(e)}")
+            self.framework_desc_text.config(state=tk.DISABLED)
+
+def _set_entry_text(self, entry, text):
+    """Set entry text with efficient clearing."""
+    entry.delete(0, tk.END)
+    entry.insert(0, text)
+
+@performance_monitor
+def _get_recommendation(self):
+    """Get a recommendation based on user query with progress indication."""
+    if self._operations_counter.get() > 0:
+        messagebox.showinfo("Operation in Progress", "Please wait for the current operation to complete.")
+        return
+        
+    if self.system is None:
+        messagebox.showwarning("Not Initialized", "System is not initialized.")
+        return
+    
+    query = self.query_entry.get().strip()
+    if not query:
+        messagebox.showwarning("Empty Query", "Please enter a query.")
+        return
+    
+    # Increment operations counter
+    self._operations_counter.increment()
+    
+    # Update status
+    self.status_var.set(f"Processing query: {query}")
+    print(f"Getting recommendation for query: '{query}'")
+    
+    # Show cursor busy indicator
+    self.config(cursor="wait")
+    
+    # Submit task to thread pool
+    self.thread_pool.submit(
+        lambda: self._get_recommendation_task(query),
+        lambda result: self._recommendation_callback(result, "general")
+    )
+
+def _get_recommendation_task(self, query):
+    """Background task to get recommendation."""
+    try:
+        result = self.system.get_recommendation(query)
+        return {"success": True, "result": result}
+    except Exception as e:
+        error_msg = f"Error getting recommendation: {str(e)}"
+        return {"success": False, "error": error_msg}
+
+def _recommendation_callback(self, task_result, result_type):
+    """Callback for recommendation tasks."""
+    # Reset cursor
+    self.config(cursor="")
+    
+    if task_result["success"]:
+        result = task_result["result"]
+        self.last_result = result
+        
+        # Display results based on type
+        if result_type == "general":
+            self._display_general_results(result)
+        elif result_type == "domain":
+            self._display_domain_results(result)
+        elif result_type == "framework":
+            self._display_framework_results(result)
+        
+        self.status_var.set("Recommendation generated successfully")
+    else:
+        error_msg = task_result["error"]
+        print(error_msg)
+        self.status_var.set(error_msg)
+        messagebox.showerror("Error", error_msg)
+    
+    # Decrement operations counter
+    self._operations_counter.decrement()
+
+@performance_monitor
+def _get_domain_recommendation(self):
+    """Get a domain-specific recommendation with improved error handling."""
+    if self._operations_counter.get() > 0:
+        messagebox.showinfo("Operation in Progress", "Please wait for the current operation to complete.")
+        return
+        
+    if self.system is None:
+        messagebox.showwarning("Not Initialized", "System is not initialized.")
+        return
+    
+    query = self.domain_query_entry.get().strip()
+    if not query:
+        messagebox.showwarning("Empty Query", "Please enter a query.")
+        return
+    
+    selected_idx = self.domain_combo.current()
+    if selected_idx < 0:
+        messagebox.showwarning("No Domain Selected", "Please select a domain.")
+        return
+    
+    domain_id = self.domains[selected_idx]['id']
+    
+    # Increment operations counter
+    self._operations_counter.increment()
+    
+    # Update status
+    self.status_var.set(f"Processing domain query: {query} for domain {domain_id}")
+    print(f"Getting domain-specific recommendation for '{domain_id}': '{query}'")
+    
+    # Show cursor busy indicator
+    self.config(cursor="wait")
+    
+    # Submit task to thread pool
+    self.thread_pool.submit(
+        lambda: self._get_domain_recommendation_task(query, domain_id),
+        lambda result: self._recommendation_callback(result, "domain")
+    )
+
+def _get_domain_recommendation_task(self, query, domain_id):
+    """Background task to get domain-specific recommendation."""
+    try:
+        result = self.system.get_domain_specific_recommendation(query, domain_id)
+        return {"success": True, "result": result}
+    except Exception as e:
+        error_msg = f"Error getting domain recommendation: {str(e)}"
+        return {"success": False, "error": error_msg}
+
+@performance_monitor
+def _get_framework_recommendation(self):
+    """Get a framework-specific recommendation with improved error handling."""
+    if self._operations_counter.get() > 0:
+        messagebox.showinfo("Operation in Progress", "Please wait for the current operation to complete.")
+        return
+        
+    if self.system is None:
+        messagebox.showwarning("Not Initialized", "System is not initialized.")
+        return
+    
+    query = self.framework_query_entry.get().strip()
+    if not query:
+        messagebox.showwarning("Empty Query", "Please enter a query.")
+        return
+    
+    selected_idx = self.framework_combo.current()
+    if selected_idx < 0:
+        messagebox.showwarning("No Framework Selected", "Please select a framework.")
+        return
+    
+    framework_key = self.frameworks[selected_idx]['key']
+    
+    # Increment operations counter
+    self._operations_counter.increment()
+    
+    # Update status
+    self.status_var.set(f"Processing framework query: {query} using {framework_key}")
+    print(f"Getting framework-specific recommendation using '{framework_key}': '{query}'")
+    
+    # Show cursor busy indicator
+    self.config(cursor="wait")
+    
+    # Submit task to thread pool
+    self.thread_pool.submit(
+        lambda: self._get_framework_recommendation_task(query, framework_key),
+        lambda result: self._recommendation_callback(result, "framework")
+    )
+
+def _get_framework_recommendation_task(self, query, framework_key):
+    """Background task to get framework-specific recommendation."""
+    try:
+        result = self.system.get_framework_specific_recommendation(query, framework_key)
+        return {"success": True, "result": result}
+    except Exception as e:
+        error_msg = f"Error getting framework recommendation: {str(e)}"
+        return {"success": False, "error": error_msg}
+
+def _display_general_results(self, result):
+    """Display general recommendation results with optimized text handling."""
+    if 'error' in result:
+        messagebox.showerror("Error", result['error'])
+        return
+    
+    # Update summary text using buffer
+    self.summary_buffer.insert(tk.END, f"Query: {result['query']}\n\n", "query")
+    self.summary_buffer.insert(tk.END, "Knowledge Source:\n", "header")
+    self.summary_buffer.insert(tk.END, f"{result['knowledge']['title']}\n\n")
+    
+    self.summary_buffer.insert(tk.END, "Framework:\n", "header")
+    self.summary_buffer.insert(tk.END, f"{result['framework']['name']}\n\n")
+    
+    if 'similarity' in result['knowledge']:
+        self.summary_buffer.insert(tk.END, f"Knowledge Relevance: {result['knowledge']['similarity']:.2f}\n")
+    if 'similarity' in result['framework']:
+        self.summary_buffer.insert(tk.END, f"Framework Relevance: {result['framework']['similarity']:.2f}\n\n")
+    
+    self.summary_buffer.insert(tk.END, "Recommendation:\n", "header")
+    self.summary_buffer.insert(tk.END, f"{result['solution']['recommendation']}\n")
+    
+    # Apply all changes at once
+    self.summary_text.config(state=tk.NORMAL)
+    self.summary_text.delete(1.0, tk.END)
+    self.summary_buffer.flush()
+    
+    # Tag formatting
+    self.summary_text.tag_configure("header", font=("Arial", 11, "bold"))
+    self.summary_text.tag_configure("query", font=("Arial", 12, "bold"))
+    
+    self.summary_text.config(state=tk.DISABLED)
+    
+    # Update steps text using buffer
+    self.steps_buffer.insert(tk.END, "Solution Steps:\n\n", "header")
+    
+    for step in result['solution']['solution_steps']:
+        self.steps_buffer.insert(tk.END, f"{step['step_number']}. {step['name']}\n", "step_name")
+        self.steps_buffer.insert(tk.END, f"{step['description']}\n\n")
+    
+    # Apply all changes at once
+    self.steps_text.config(state=tk.NORMAL)
+    self.steps_text.delete(1.0, tk.END)
+    self.steps_buffer.flush()
+    
+    # Tag formatting
+    self.steps_text.tag_configure("header", font=("Arial", 12, "bold"))
+    self.steps_text.tag_configure("step_name", font=("Arial", 11, "bold"))
+    
+    self.steps_text.config(state=tk.DISABLED)
+
+def _display_domain_results(self, result):
+    """Display domain-specific recommendation results with optimized text handling."""
+    if 'error' in result:
+        messagebox.showerror("Error", result['error'])
+        return
+    
+    # Update knowledge text using buffer
+    self.domain_knowledge_buffer.insert(tk.END, f"Query: {result['query']}\n\n", "query")
+    self.domain_knowledge_buffer.insert(tk.END, f"Domain: {result['domain']}\n\n", "domain")
+    
+    self.domain_knowledge_buffer.insert(tk.END, "Knowledge Source:\n", "header")
+    self.domain_knowledge_buffer.insert(tk.END, f"{result['knowledge']['title']}\n\n")
+    
+    if 'content' in result['knowledge']:
+        self.domain_knowledge_buffer.insert(tk.END, "Content:\n", "header")
+        self.domain_knowledge_buffer.insert(tk.END, f"{result['knowledge']['content']}\n\n")
+    
+    # Apply all changes at once
+    self.domain_knowledge_text.config(state=tk.NORMAL)
+    self.domain_knowledge_text.delete(1.0, tk.END)
+    self.domain_knowledge_buffer.flush()
+    
+    # Tag formatting
+    self.domain_knowledge_text.tag_configure("header", font=("Arial", 11, "bold"))
+    self.domain_knowledge_text.tag_configure("query", font=("Arial", 12, "bold"))
+    self.domain_knowledge_text.tag_configure("domain", font=("Arial", 12, "bold"))
+    
+    self.domain_knowledge_text.config(state=tk.DISABLED)
+    
+    # Update steps text using buffer
+    self.domain_steps_buffer.insert(tk.END, f"Framework: {result['framework']['name']}\n\n", "framework")
+    
+    self.domain_steps_buffer.insert(tk.END, "Recommendation:\n", "header")
+    self.domain_steps_buffer.insert(tk.END, f"{result['solution']['recommendation']}\n\n")
+    
+    self.domain_steps_buffer.insert(tk.END, "Solution Steps:\n\n", "header")
+    
+    for step in result['solution']['solution_steps']:
+        self.domain_steps_buffer.insert(tk.END, f"{step['step_number']}. {step['name']}\n", "step_name")
+        self.domain_steps_buffer.insert(tk.END, f"{step['description']}\n\n")
+    
+    # Apply all changes at once
+    self.domain_steps_text.config(state=tk.NORMAL)
+    self.domain_steps_text.delete(1.0, tk.END)
+    self.domain_steps_buffer.flush()
+    
+    # Tag formatting
+    self.domain_steps_text.tag_configure("header", font=("Arial", 11, "bold"))
+    self.domain_steps_text.tag_configure("framework", font=("Arial", 12, "bold"))
+    self.domain_steps_text.tag_configure("step_name", font=("Arial", 11, "bold"))
+    
+    self.domain_steps_text.config(state=tk.DISABLED)
+
+def _display_framework_results(self, result):
+    """Display framework-specific recommendation results with optimized text handling."""
+    if 'error' in result:
+        messagebox.showerror("Error", result['error'])
+        return
+    
+    # Use buffer for efficient text updates
+    buffer = self.framework_results_buffer
+    
+    buffer.insert(tk.END, f"Query: {result['query
 ```
