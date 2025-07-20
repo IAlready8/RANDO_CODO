@@ -1,0 +1,786 @@
+#!/usr/bin/env python3
+“””
+Graphical User Interface for the Modular Knowledge System.
+This module provides a GUI alternative to the CLI interface.
+Optimized for performance, memory usage, and responsiveness.
+“””
+import os
+import sys
+import json
+import threading
+import tkinter as tk
+from tkinter import ttk, scrolledtext, filedialog, messagebox
+from tkinter.font import Font
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import networkx as nx
+from pathlib import Path
+import textwrap
+import io
+import contextlib
+import time
+import queue
+import functools
+import weakref
+
+# Constants for UI configuration
+
+PADDING = 10
+BUTTON_WIDTH = 20
+TEXT_WIDTH = 80
+DEFAULT_FONT = (“Arial”, 10)
+HEADER_FONT = (“Arial”, 16, “bold”)
+SUBHEADER_FONT = (“Arial”, 12, “bold”)
+BACKGROUND_COLOR = “#f5f5f5”
+
+try:
+from mks.core.system import ModularKnowledgeSystem
+except ImportError:
+print(“Error: Modular Knowledge System package not found.”)
+print(“Please ensure the package is installed by running:”)
+print(”  pip install -e .”)
+sys.exit(1)
+
+def performance_monitor(func):
+“”“Decorator to monitor performance of functions.”””
+@functools.wraps(func)
+def wrapper(*args, **kwargs):
+start_time = time.time()
+result = func(*args, **kwargs)
+end_time = time.time()
+execution_time = end_time - start_time
+if execution_time > 0.1:  # Only log operations that take more than 100ms
+print(f”Performance: {func.**name**} took {execution_time:.4f} seconds”)
+return result
+return wrapper
+
+class BufferedText:
+“”“A buffer for text operations to minimize GUI updates.”””
+
+```
+def __init__(self, text_widget):
+    self.text_widget = text_widget
+    self.buffer = []
+
+def insert(self, position, text, tag=None):
+    self.buffer.append((position, text, tag))
+
+def flush(self):
+    """Apply all buffered operations at once to reduce GUI updates."""
+    if not self.buffer:
+        return
+    
+    self.text_widget.config(state=tk.NORMAL)
+    for position, text, tag in self.buffer:
+        if tag:
+            self.text_widget.insert(position, text, tag)
+        else:
+            self.text_widget.insert(position, text)
+    self.text_widget.see(tk.END)
+    self.text_widget.config(state=tk.DISABLED)
+    self.buffer.clear()
+```
+
+class ScrollableFrame(ttk.Frame):
+“”“A scrollable frame widget with optimized canvas rendering.”””
+
+```
+def __init__(self, container, *args, **kwargs):
+    super().__init__(container, *args, **kwargs)
+    
+    # Use double buffering to reduce flicker
+    self.canvas = tk.Canvas(self, highlightthickness=0, doublebuffer=True)
+    scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+    
+    self.scrollable_frame = ttk.Frame(self.canvas)
+    
+    # Store callback reference to avoid garbage collection
+    self._configure_callback = lambda e: self._on_frame_configure()
+    self.scrollable_frame.bind("<Configure>", self._configure_callback)
+    
+    self._frame_id = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+    self.canvas.configure(yscrollcommand=scrollbar.set)
+    
+    # Use weights for better resizing behavior
+    self.columnconfigure(0, weight=1)
+    self.rowconfigure(0, weight=1)
+    
+    self.canvas.grid(row=0, column=0, sticky="nsew")
+    scrollbar.grid(row=0, column=1, sticky="ns")
+    
+    # Mouse wheel scrolling with throttling
+    self._last_scroll_time = 0
+    self._scroll_throttle = 0.05  # seconds
+    self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+    
+    # Bind to window resizing for better layout
+    self.canvas.bind("<Configure>", self._on_canvas_configure)
+
+def _on_frame_configure(self):
+    """Update the scrollregion to encompass the inner frame."""
+    self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+def _on_canvas_configure(self, event):
+    """Resize the inner frame to match the canvas."""
+    # Adjust the width of the canvas window
+    canvas_width = event.width
+    self.canvas.itemconfig(self._frame_id, width=canvas_width)
+
+def _on_mousewheel(self, event):
+    """Handle mouse wheel scrolling with throttling."""
+    current_time = time.time()
+    if current_time - self._last_scroll_time < self._scroll_throttle:
+        return
+    
+    self._last_scroll_time = current_time
+    self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+```
+
+class OutputRedirector:
+“”“Redirect stdout to a tkinter Text widget with efficient buffering.”””
+
+```
+def __init__(self, text_widget, buffer_size=1024):
+    self.text_widget = text_widget
+    self.buffer = ""
+    self.buffer_size = buffer_size
+    self.update_queue = queue.Queue()
+    
+    # Start a timer to process the queue periodically
+    self._schedule_update()
+
+def write(self, string):
+    """Buffer writes and process them in batches."""
+    self.buffer += string
+    if len(self.buffer) >= self.buffer_size or '\n' in string:
+        self.update_queue.put(self.buffer)
+        self.buffer = ""
+
+def _schedule_update(self):
+    """Process any queued updates and reschedule."""
+    self._process_updates()
+    # Schedule next update (40ms = ~25 fps, good for UI updates)
+    if self.text_widget.winfo_exists():
+        self.text_widget.after(40, self._schedule_update)
+
+def _process_updates(self):
+    """Process all pending updates from the queue."""
+    try:
+        # Process all available updates
+        updates = []
+        while not self.update_queue.empty():
+            updates.append(self.update_queue.get_nowait())
+            self.update_queue.task_done()
+        
+        if updates:
+            combined_update = ''.join(updates)
+            self.text_widget.config(state=tk.NORMAL)
+            self.text_widget.insert(tk.END, combined_update)
+            
+            # Limit buffer size to prevent memory issues (keep last ~10K chars)
+            if self.text_widget.index(tk.END) > "1000.0":
+                self.text_widget.delete("1.0", "500.0")
+            
+            self.text_widget.see(tk.END)
+            self.text_widget.config(state=tk.DISABLED)
+    except Exception as e:
+        # Silently handle errors during shutdown
+        pass
+
+def flush(self):
+    """Flush the remaining buffer."""
+    if self.buffer:
+        self.update_queue.put(self.buffer)
+        self.buffer = ""
+```
+
+class ThreadSafeCounter:
+“”“Thread-safe counter for tracking operations.”””
+
+```
+def __init__(self):
+    self.value = 0
+    self._lock = threading.Lock()
+
+def increment(self):
+    with self._lock:
+        self.value += 1
+    return self.value
+
+def decrement(self):
+    with self._lock:
+        self.value -= 1
+    return self.value
+
+def get(self):
+    with self._lock:
+        return self.value
+```
+
+class ThreadPool:
+“”“Simple thread pool for background tasks.”””
+
+```
+def __init__(self, max_workers=4):
+    self.tasks = queue.Queue()
+    self.max_workers = max_workers
+    self.workers = []
+    self.running = True
+    self.active_tasks = ThreadSafeCounter()
+    
+    # Start worker threads
+    for _ in range(max_workers):
+        worker = threading.Thread(target=self._worker_loop, daemon=True)
+        worker.start()
+        self.workers.append(worker)
+
+def _worker_loop(self):
+    """Worker thread loop to process tasks."""
+    while self.running:
+        try:
+            task, args, kwargs, callback = self.tasks.get(timeout=0.5)
+            self.active_tasks.increment()
+            try:
+                result = task(*args, **kwargs)
+                if callback:
+                    callback(result)
+            except Exception as e:
+                print(f"Error in thread pool task: {e}")
+            finally:
+                self.active_tasks.decrement()
+                self.tasks.task_done()
+        except queue.Empty:
+            continue
+
+def submit(self, task, callback=None, *args, **kwargs):
+    """Submit a task to the thread pool."""
+    if self.running:
+        self.tasks.put((task, args, kwargs, callback))
+
+def shutdown(self):
+    """Shutdown the thread pool."""
+    self.running = False
+    for worker in self.workers:
+        if worker.is_alive():
+            worker.join(0.1)  # Give workers a chance to exit gracefully
+```
+
+class ModularKnowledgeSystemGUI(tk.Tk):
+“”“Main GUI class for the Modular Knowledge System, optimized for performance.”””
+
+```
+def __init__(self):
+    """Initialize the GUI with optimized components and lazy loading."""
+    super().__init__()
+    
+    self.title("Modular Knowledge System")
+    self.geometry("1200x800")
+    self.minsize(800, 600)
+    
+    # Set up the thread pool for background tasks
+    self.thread_pool = ThreadPool(max_workers=4)
+    
+    # Track active operations to prevent concurrent operations
+    self._operations_counter = ThreadSafeCounter()
+    
+    # Setup UI style once instead of repeatedly
+    self._setup_styles()
+    
+    # Instance variables with efficient memory usage
+    self.system = None
+    self.domains = []
+    self.frameworks = []
+    self.last_result = None
+    self.output_dir = Path.cwd() / 'outputs'
+    self.output_dir.mkdir(exist_ok=True)
+    
+    # Use weak references to allow garbage collection of large objects
+    self._knowledge_graph_fig = None
+    self._knowledge_graph_canvas = None
+    
+    # Setup the main container with proper weights for better resizing
+    self.main_frame = ttk.Frame(self)
+    self.main_frame.pack(fill=tk.BOTH, expand=True, padx=PADDING, pady=PADDING)
+    
+    # Create notebook with optimized tab creation
+    self.notebook = ttk.Notebook(self.main_frame)
+    self.notebook.pack(fill=tk.BOTH, expand=True)
+    
+    # Cache for tab widgets to avoid recreating them
+    self._tab_frames = {}
+    
+    # Create initial tabs efficiently
+    self._create_home_tab()
+    
+    # Status bar at the bottom
+    self.status_var = tk.StringVar()
+    self.status_var.set("Ready")
+    self.status_bar = ttk.Label(
+        self, 
+        textvariable=self.status_var, 
+        relief=tk.SUNKEN, 
+        anchor=tk.W
+    )
+    self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+    
+    # Lazy load other tabs on first selection
+    self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+    
+    # Set up event bindings for proper cleanup
+    self.protocol("WM_DELETE_WINDOW", self._on_close)
+    
+    # Initialize system in a background thread
+    self.after(100, self._initialize_system_threaded)
+
+def _setup_styles(self):
+    """Set up ttk styles once for better performance."""
+    self.style = ttk.Style()
+    
+    # Configure styles only once
+    self.style.configure("TFrame", background=BACKGROUND_COLOR)
+    self.style.configure("TLabel", background=BACKGROUND_COLOR)
+    self.style.configure("TButton", font=DEFAULT_FONT)
+    self.style.configure("Header.TLabel", font=HEADER_FONT)
+    self.style.configure("Subheader.TLabel", font=SUBHEADER_FONT)
+    
+    # Add padding to buttons for better usability
+    self.style.configure("TButton", padding=5)
+    
+    # Optimize combobox rendering
+    self.style.configure("TCombobox", padding=2)
+    
+    # Improve notebook appearance
+    self.style.configure("TNotebook", background=BACKGROUND_COLOR)
+    self.style.configure("TNotebook.Tab", padding=[10, 2])
+
+def _on_tab_changed(self, event):
+    """Lazy load tabs when first selected to improve startup time."""
+    current_tab = self.notebook.index(self.notebook.select())
+    tab_name = self.notebook.tab(current_tab, "text")
+    
+    # Initialize tabs only when they're first selected
+    if tab_name == "Query" and "Query" not in self._tab_frames:
+        self._create_query_tab()
+    elif tab_name == "Domain-Specific" and "Domain-Specific" not in self._tab_frames:
+        self._create_domain_tab()
+    elif tab_name == "Framework-Specific" and "Framework-Specific" not in self._tab_frames:
+        self._create_framework_tab()
+    elif tab_name == "Visualization" and "Visualization" not in self._tab_frames:
+        self._create_visualization_tab()
+    elif tab_name == "Settings" and "Settings" not in self._tab_frames:
+        self._create_settings_tab()
+
+def _on_close(self):
+    """Clean up resources before closing."""
+    # Stop redirecting stdout
+    if hasattr(self, "stdout_redirector"):
+        sys.stdout = sys.__stdout__
+    
+    # Shutdown thread pool
+    self.thread_pool.shutdown()
+    
+    # Allow matplotlib to clean up resources
+    if self._knowledge_graph_fig is not None:
+        plt.close(self._knowledge_graph_fig)
+    
+    # Destroy the window
+    self.destroy()
+
+def _create_home_tab(self):
+    """Create the home tab with system information."""
+    home_frame = ttk.Frame(self.notebook)
+    self.notebook.add(home_frame, text="Home")
+    self._tab_frames["Home"] = home_frame
+    
+    # Title and description
+    title_label = ttk.Label(
+        home_frame, 
+        text="Modular Knowledge System", 
+        font=HEADER_FONT,
+        style="Header.TLabel"
+    )
+    title_label.pack(pady=(20, 5))
+    
+    description_label = ttk.Label(
+        home_frame,
+        text="A system that connects specialized knowledge with problem-solving frameworks",
+        font=("Arial", 12),
+        wraplength=600
+    )
+    description_label.pack(pady=(0, 20))
+    
+    # System status frame
+    status_frame = ttk.LabelFrame(home_frame, text="System Status")
+    status_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    self.system_status_var = tk.StringVar()
+    self.system_status_var.set("Not initialized")
+    system_status_label = ttk.Label(status_frame, textvariable=self.system_status_var)
+    system_status_label.pack(pady=5, padx=5, anchor=tk.W)
+    
+    init_button = ttk.Button(
+        status_frame, 
+        text="Initialize System", 
+        command=self._initialize_system_threaded
+    )
+    init_button.pack(pady=5, padx=5, anchor=tk.W)
+    
+    # Quick links frame
+    links_frame = ttk.LabelFrame(home_frame, text="Quick Links")
+    links_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    # Create buttons with consistent sizing for better UI
+    for i, (text, tab_idx) in enumerate([
+        ("New Query", 1), 
+        ("Domain-Specific Query", 2), 
+        ("Framework-Specific Query", 3),
+        ("Knowledge Graph", 4)
+    ]):
+        button = ttk.Button(
+            links_frame, 
+            text=text, 
+            command=lambda idx=tab_idx: self.notebook.select(idx),
+            width=BUTTON_WIDTH
+        )
+        button.pack(pady=5, padx=5, side=tk.LEFT)
+    
+    # Launch CLI button
+    cli_frame = ttk.LabelFrame(home_frame, text="Command Line Interface")
+    cli_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    cli_desc_label = ttk.Label(
+        cli_frame,
+        text="Launch the command-line interface for text-based interaction.",
+        wraplength=600
+    )
+    cli_desc_label.pack(pady=5, padx=5, anchor=tk.W)
+    
+    cli_button = ttk.Button(
+        cli_frame, 
+        text="Launch CLI", 
+        command=self._launch_cli
+    )
+    cli_button.pack(pady=5, padx=5, anchor=tk.W)
+    
+    # Output console with efficient text buffer
+    console_frame = ttk.LabelFrame(home_frame, text="Console Output")
+    console_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+    
+    self.console_text = scrolledtext.ScrolledText(
+        console_frame, 
+        height=10, 
+        wrap=tk.WORD,
+        state=tk.DISABLED,
+        background="#f8f8f8",  # Slightly different background for better readability
+        font=("Consolas", 9)    # Monospaced font for console output
+    )
+    self.console_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    # Optimize text widget for performance
+    self.console_text.config(maxundo=0, undo=False, autoseparators=False)
+    
+    # Redirect stdout to the console with optimized buffering
+    self.stdout_redirector = OutputRedirector(self.console_text)
+    sys.stdout = self.stdout_redirector
+
+def _create_query_tab(self):
+    """Create the query tab for general recommendations."""
+    query_frame = ttk.Frame(self.notebook)
+    self.notebook.add(query_frame, text="Query")
+    self._tab_frames["Query"] = query_frame
+    
+    # Title and description
+    title_label = ttk.Label(
+        query_frame, 
+        text="Get Recommendations", 
+        style="Header.TLabel"
+    )
+    title_label.pack(pady=(20, 5))
+    
+    description_label = ttk.Label(
+        query_frame,
+        text="Enter your query to get a recommendation based on relevant knowledge and problem-solving frameworks.",
+        wraplength=600
+    )
+    description_label.pack(pady=(0, 20))
+    
+    # Query input
+    input_frame = ttk.Frame(query_frame)
+    input_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    ttk.Label(input_frame, text="Query:").pack(anchor=tk.W)
+    
+    self.query_entry = ttk.Entry(input_frame, width=TEXT_WIDTH)
+    self.query_entry.pack(fill=tk.X, pady=5)
+    
+    # Add keyboard shortcut for submission (Enter key)
+    self.query_entry.bind("<Return>", lambda e: self._get_recommendation())
+    
+    # Examples dropdown
+    examples_frame = ttk.Frame(input_frame)
+    examples_frame.pack(fill=tk.X, pady=5)
+    
+    ttk.Label(examples_frame, text="Examples:").pack(side=tk.LEFT, padx=(0, 5))
+    
+    example_queries = [
+        "How can I improve the user interface of my application?",
+        "What's the best approach to designing a plumbing system?",
+        "How should I organize my electrical wiring setup?",
+        "What methodology should I use for my software project?",
+        "How can I improve team collaboration on my project?"
+    ]
+    
+    self.example_var = tk.StringVar()
+    example_combo = ttk.Combobox(
+        examples_frame, 
+        textvariable=self.example_var, 
+        values=example_queries,
+        width=60
+    )
+    example_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    
+    # Use lambda for cleaner event handling
+    example_button = ttk.Button(
+        examples_frame, 
+        text="Use Example", 
+        command=lambda: self._set_entry_text(self.query_entry, self.example_var.get())
+    )
+    example_button.pack(side=tk.LEFT, padx=5)
+    
+    # Buttons
+    buttons_frame = ttk.Frame(input_frame)
+    buttons_frame.pack(fill=tk.X, pady=10)
+    
+    get_button = ttk.Button(
+        buttons_frame, 
+        text="Get Recommendation", 
+        command=self._get_recommendation
+    )
+    get_button.pack(side=tk.LEFT, padx=5)
+    
+    clear_button = ttk.Button(
+        buttons_frame, 
+        text="Clear", 
+        command=lambda: (self.query_entry.delete(0, tk.END), self._clear_results())
+    )
+    clear_button.pack(side=tk.LEFT, padx=5)
+    
+    save_button = ttk.Button(
+        buttons_frame, 
+        text="Save Results", 
+        command=self._save_results
+    )
+    save_button.pack(side=tk.LEFT, padx=5)
+    
+    # Results area with vertical split and optimized pane configuration
+    results_paned = ttk.PanedWindow(query_frame, orient=tk.HORIZONTAL)
+    results_paned.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+    
+    # Left pane - Summary
+    left_frame = ttk.LabelFrame(results_paned, text="Summary")
+    
+    self.summary_text = scrolledtext.ScrolledText(
+        left_frame, 
+        wrap=tk.WORD,
+        height=20,
+        width=40,
+        state=tk.DISABLED
+    )
+    self.summary_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    # Create buffered text handler for more efficient updates
+    self.summary_buffer = BufferedText(self.summary_text)
+    
+    # Right pane - Detailed Steps
+    right_frame = ttk.LabelFrame(results_paned, text="Solution Steps")
+    
+    self.steps_text = scrolledtext.ScrolledText(
+        right_frame, 
+        wrap=tk.WORD,
+        height=20,
+        width=60,
+        state=tk.DISABLED
+    )
+    self.steps_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    # Create buffered text handler
+    self.steps_buffer = BufferedText(self.steps_text)
+    
+    # Add frames to paned window with appropriate weights
+    results_paned.add(left_frame, weight=1)
+    results_paned.add(right_frame, weight=2)
+
+def _create_domain_tab(self):
+    """Create the domain-specific tab."""
+    domain_frame = ttk.Frame(self.notebook)
+    self.notebook.add(domain_frame, text="Domain-Specific")
+    self._tab_frames["Domain-Specific"] = domain_frame
+    
+    # Title and description
+    title_label = ttk.Label(
+        domain_frame, 
+        text="Domain-Specific Recommendations", 
+        style="Header.TLabel"
+    )
+    title_label.pack(pady=(20, 5))
+    
+    description_label = ttk.Label(
+        domain_frame,
+        text="Get recommendations tailored to a specific knowledge domain.",
+        wraplength=600
+    )
+    description_label.pack(pady=(0, 20))
+    
+    # Domain selection and query input
+    input_frame = ttk.Frame(domain_frame)
+    input_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    # Domain selection with proper layout
+    domain_select_frame = ttk.Frame(input_frame)
+    domain_select_frame.pack(fill=tk.X, pady=5)
+    
+    ttk.Label(domain_select_frame, text="Domain:").pack(side=tk.LEFT, padx=(0, 5))
+    
+    self.domain_var = tk.StringVar()
+    self.domain_combo = ttk.Combobox(
+        domain_select_frame, 
+        textvariable=self.domain_var,
+        state="readonly",
+        width=40
+    )
+    self.domain_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    
+    refresh_domains_button = ttk.Button(
+        domain_select_frame, 
+        text="Refresh Domains", 
+        command=self._update_domain_list
+    )
+    refresh_domains_button.pack(side=tk.LEFT, padx=5)
+    
+    # Query input
+    ttk.Label(input_frame, text="Query:").pack(anchor=tk.W, pady=(10, 0))
+    
+    self.domain_query_entry = ttk.Entry(input_frame, width=TEXT_WIDTH)
+    self.domain_query_entry.pack(fill=tk.X, pady=5)
+    
+    # Add keyboard shortcut
+    self.domain_query_entry.bind("<Return>", lambda e: self._get_domain_recommendation())
+    
+    # Buttons
+    buttons_frame = ttk.Frame(input_frame)
+    buttons_frame.pack(fill=tk.X, pady=10)
+    
+    get_button = ttk.Button(
+        buttons_frame, 
+        text="Get Domain-Specific Recommendation", 
+        command=self._get_domain_recommendation
+    )
+    get_button.pack(side=tk.LEFT, padx=5)
+    
+    clear_button = ttk.Button(
+        buttons_frame, 
+        text="Clear", 
+        command=lambda: (self.domain_query_entry.delete(0, tk.END), self._clear_results())
+    )
+    clear_button.pack(side=tk.LEFT, padx=5)
+    
+    save_button = ttk.Button(
+        buttons_frame, 
+        text="Save Results", 
+        command=self._save_results
+    )
+    save_button.pack(side=tk.LEFT, padx=5)
+    
+    # Results area
+    results_frame = ttk.LabelFrame(domain_frame, text="Results")
+    results_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+    
+    # Results with optimized vertical split
+    results_paned = ttk.PanedWindow(results_frame, orient=tk.HORIZONTAL)
+    results_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    # Left pane - Domain Knowledge
+    left_frame = ttk.LabelFrame(results_paned, text="Domain Knowledge")
+    
+    self.domain_knowledge_text = scrolledtext.ScrolledText(
+        left_frame, 
+        wrap=tk.WORD,
+        height=20,
+        width=40,
+        state=tk.DISABLED
+    )
+    self.domain_knowledge_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    # Buffered text for domain knowledge
+    self.domain_knowledge_buffer = BufferedText(self.domain_knowledge_text)
+    
+    # Right pane - Recommendations
+    right_frame = ttk.LabelFrame(results_paned, text="Recommendations & Steps")
+    
+    self.domain_steps_text = scrolledtext.ScrolledText(
+        right_frame, 
+        wrap=tk.WORD,
+        height=20,
+        width=60,
+        state=tk.DISABLED
+    )
+    self.domain_steps_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    # Buffered text for domain steps
+    self.domain_steps_buffer = BufferedText(self.domain_steps_text)
+    
+    # Add panes with weights
+    results_paned.add(left_frame, weight=1)
+    results_paned.add(right_frame, weight=2)
+    
+    # If system is already initialized, update the domain list
+    if self.system is not None:
+        self._update_domain_list()
+
+def _create_framework_tab(self):
+    """Create the framework-specific tab."""
+    framework_frame = ttk.Frame(self.notebook)
+    self.notebook.add(framework_frame, text="Framework-Specific")
+    self._tab_frames["Framework-Specific"] = framework_frame
+    
+    # Title and description
+    title_label = ttk.Label(
+        framework_frame, 
+        text="Framework-Specific Recommendations", 
+        style="Header.TLabel"
+    )
+    title_label.pack(pady=(20, 5))
+    
+    description_label = ttk.Label(
+        framework_frame,
+        text="Get recommendations using a specific problem-solving framework.",
+        wraplength=600
+    )
+    description_label.pack(pady=(0, 20))
+    
+    # Framework selection and query input
+    input_frame = ttk.Frame(framework_frame)
+    input_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    # Framework selection
+    framework_select_frame = ttk.Frame(input_frame)
+    framework_select_frame.pack(fill=tk.X, pady=5)
+    
+    ttk.Label(framework_select_frame, text="Framework:").pack(side=tk.LEFT, padx=(0, 5))
+    
+    self.framework_var = tk.StringVar()
+    self.framework_combo = ttk.Combobox(
+        framework_select_frame, 
+        textvariable=self.framework_var,
+        state="readonly",
+        width=40
+    )
+    self.framework_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    
+    refresh_frameworks_button = ttk.Button(
+        framework_select_frame, 
+        text="Refresh Frameworks", 
+        command=self._update_framework_list
+    )
+    refresh_frameworks_button.pack(side=tk.LEFT, padx=5)
+```
