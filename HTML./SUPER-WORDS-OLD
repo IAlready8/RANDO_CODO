@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Unholy Swiss Army Knife (Vanilla JS)</title>
+  <!-- Dark theme + minimal styling -->
+  <style>
+    /* --- BASIC RESETS & DARK THEME --- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      background-color: #1a1a1a; 
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+    }
+    a {
+      text-decoration: none;
+    }
+    /* --- UTILITY CLASSES --- */
+    .hidden { display: none !important; }
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .justify-between { justify-content: space-between; }
+    .rounded { border-radius: 0.375rem; }
+    .rounded-full { border-radius: 9999px; }
+    .p-2 { padding: 0.5rem; }
+    .p-3 { padding: 0.75rem; }
+    .p-4 { padding: 1rem; }
+    .m-2 { margin: 0.5rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-3 { margin-bottom: 0.75rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .space-x-2 > * + * { margin-left: 0.5rem; }
+    .space-y-2 > * + * { margin-top: 0.5rem; }
+    .space-y-3 > * + * { margin-top: 0.75rem; }
+    .space-y-4 > * + * { margin-top: 1rem; }
+    .overflow-y-auto { overflow-y: auto; }
+    .overflow-x-auto { overflow-x: auto; }
+    .text-white { color: #fff; }
+    .text-green-400 { color: #68D391; }
+    .text-red-400 { color: #fc8181; }
+    .text-red-500 { color: #f56565; }
+    .text-gray-300 { color: #d1d1d1; }
+    .text-gray-400 { color: #a0a0a0; }
+    .text-gray-500 { color: #6e6e6e; }
+    .bg-gray-800 { background-color: #2d2d2d; }
+    .bg-gray-900 { background-color: #1a1a1a; }
+    .bg-red-500 { background-color: #f56565; }
+    .bg-red-600 { background-color: #e53e3e; }
+    .border { border: 1px solid #444; }
+    .border-gray-700 { border-color: #3f3f3f; }
+    .border-red-500 { border-color: #f56565; }
+    .cursor-pointer { cursor: pointer; }
+    .cursor-move { cursor: move; }
+    .uppercase { text-transform: uppercase; }
+    .text-center { text-align: center; }
+    .text-sm { font-size: 0.875rem; }
+    .text-lg { font-size: 1.125rem; }
+    .font-bold { font-weight: bold; }
+    .font-extrabold { font-weight: 800; }
+    .min-h-screen { min-height: 100vh; }
+    .max-w-4xl { max-width: 64rem; }
+    .rounded-full { border-radius: 9999px; }
+    .shadow-md { 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .transition-all {
+      transition: all 0.2s ease;
+    }
+    .bg-red-600:hover { background-color: #c53030; }
+    .bg-red-500:hover { background-color: #c53030; }
+    .outline-none { outline: none; }
+    .whitespace-pre-wrap { white-space: pre-wrap; }
+    .font-mono { font-family: monospace; }
+    .w-full { width: 100%; }
+    .max-h-96 { max-height: 24rem; }
+
+    /* Card components */
+    .card {
+      background-color: #2d2d2d;
+      border: 1px solid #3f3f3f;
+      padding: 1rem;
+      border-radius: 0.375rem;
+      margin-bottom: 1rem;
+    }
+    .card-header {
+      margin-bottom: 0.75rem;
+    }
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+      color: #fc8181;
+    }
+    .card-content {
+      /* optional area */
+    }
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #555;
+    }
+  </style>
+  <!-- SortableJS for drag & drop -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <!-- Chart.js for charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="min-h-screen text-white" style="max-width: 64rem; margin: 0 auto;">
+    <header class="text-center mb-6">
+      <h1 class="text-3xl font-extrabold text-red-500 mb-2 uppercase">
+        THE UNHOLY SWISS ARMY KNIFE
+      </h1>
+      <p class="text-gray-400">
+        Exploit LLM frameworks for personal advantage. Hack the system or get out.
+      </p>
+    </header>
+
+    <!-- TABS -->
+    <div class="flex space-x-2 bg-gray-800 p-2 rounded justify-center mb-4" id="tabs">
+      <button class="px-4 py-2 text-sm rounded-lg transition-all bg-red-500 text-white" data-tab="generator">Generator</button>
+      <button class="px-4 py-2 text-sm rounded-lg transition-all text-gray-400" data-tab="analytics">Analytics</button>
+      <button class="px-4 py-2 text-sm rounded-lg transition-all text-gray-400" data-tab="history">History</button>
+      <button class="px-4 py-2 text-sm rounded-lg transition-all text-gray-400" data-tab="settings">Settings</button>
+      <button class="px-4 py-2 text-sm rounded-lg transition-all text-gray-400" data-tab="aichat">AIChat</button>
+    </div>
+
+    <!-- CONTENT SECTIONS -->
+    <div id="generator-section" class="">
+      <!-- Generator Tab -->
+      <div class="space-y-4">
+        <div class="bg-gray-800 p-2 rounded" id="selected-categories-container" style="overflow-x:auto;">
+          <!-- Selected categories drag area -->
+          <div id="selectedCategories" class="flex space-x-2"></div>
+        </div>
+
+        <div id="categorySelection" class="space-y-4"></div>
+
+        <button id="generatePromptBtn" class="w-full py-3 rounded-lg transition-all text-center bg-gray-700 text-gray-500 cursor-not-allowed">
+          Generate Pattern
+        </button>
+
+        <div id="generatedPromptCard" class="card hidden">
+          <div class="card-header">
+            <div class="card-title">Generated Pattern</div>
+          </div>
+          <div class="card-content">
+            <pre id="generatedPromptOutput" class="whitespace-pre-wrap text-sm bg-gray-900 p-4 rounded text-green-400 font-mono"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="analytics-section" class="hidden">
+      <!-- Analytics Tab -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Usage Analytics</div>
+        </div>
+        <div class="card-content">
+          <div class="space-y-3">
+            <div style="width:100%; max-width:600px; margin:0 auto;">
+              <canvas id="usagePieChart"></canvas>
+            </div>
+            <div style="width:100%; max-width:600px; margin:0 auto;">
+              <canvas id="usageBarChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="history-section" class="hidden">
+      <!-- History Tab -->
+      <div class="card">
+        <div class="card-header flex justify-between items-center">
+          <div class="card-title">Pattern History</div>
+          <button id="exportHistoryBtn" class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">
+            Export History
+          </button>
+        </div>
+        <div class="card-content">
+          <div id="historyList" class="space-y-4 max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-section" class="hidden">
+      <!-- Settings Tab -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Settings</div>
+        </div>
+        <div class="card-content space-y-4">
+          <div>
+            <h4 class="text-md text-gray-300 mb-2">Add New Category</h4>
+            <div class="flex space-x-2">
+              <input id="newCategoryInput" type="text" placeholder="Category Name" 
+                class="flex-1 px-3 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-red-500" />
+              <button id="addCategoryBtn" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Add</button>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">
+            Define custom categories or refine existing ones to push your prompt engineering further.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div id="aichat-section" class="hidden">
+      <!-- AI Chat Tab -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">AI Chat (Placeholder)</div>
+        </div>
+        <div class="card-content">
+          <div id="chatMessages" class="flex flex-col space-y-2 h-80 overflow-y-auto mb-4 bg-gray-900 p-2 rounded"></div>
+          <div class="flex space-x-2">
+            <input id="chatInput" type="text" placeholder="Ask a cunning question..." 
+              class="flex-1 px-3 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-red-500" />
+            <button id="chatSendBtn" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN SCRIPT -->
+  <script>
+    // -----------------------------
+    // 1) Data: Categories & Frameworks
+    // -----------------------------
+    const CATEGORIES = {
+      Exploration: {
+        description: "Deep discovery and investigation",
+        superWords: [
+          "Ascend", "Excavate", "Probe", "Expand", "Map", "Spiral", "Investigate",
+          "Discover", "Unearth", "Survey", "Scout", "Navigate", "Traverse", "Scan",
+          "Dissect", "Analyze", "Examine", "Research", "Hunt", "Quest"
+        ],
+        patterns: [
+          "Define-Analyze-Solve",
+          "Probe-Expand-Converge",
+          "Map conceptual territory",
+          "Spiral into deeper understanding"
+        ]
+      },
+      Integration: {
+        description: "Synthesis and unification",
+        superWords: [
+          "Blend","Weave","Converge","Link","Synthesize","Mesh","Fuse",
+          "Bridge","Unite","Combine","Merge","Connect","Join","Bond",
+          "Interlock","Network","Harmonize","Integrate","Unify","Synchronize"
+        ],
+        patterns: [
+          "Integrate contrasting perspectives",
+          "Layer elements for synthesis",
+          "Weave multiple threads",
+          "Bridge disparate concepts"
+        ]
+      },
+      Transformation: {
+        description: "Evolution and metamorphosis",
+        superWords: [
+          "Morph","Transmute","Harmonize","Reframe","Pivot","Transform",
+          "Evolve","Adapt","Shift","Convert","Modify","Reshape","Revolutionize",
+          "Metamorphose","Transfigure","Reconstruct","Reformulate","Redesign",
+          "Regenerate","Innovate"
+        ],
+        patterns: [
+          "Transform with synthesis",
+          "Evolve iteratively",
+          "Pivot with purpose",
+          "Reframe through new lens"
+        ]
+      },
+      Refinement: {
+        description: "Precision and perfection",
+        superWords: [
+          "Distill","Sharpen","Hone","Optimize","Perfect","Tune","Polish",
+          "Calibrate","Refine","Focus","Enhance","Elevate","Magnify",
+          "Crystallize","Purify","Streamline","Precision","Detail","Clarify","Amplify"
+        ],
+        patterns: [
+          "Distill core essence",
+          "Refine recursively",
+          "Optimize for clarity",
+          "Sharpen key elements"
+        ]
+      },
+      Creativity: {
+        description: "Innovation and imagination",
+        superWords: [
+          "Imagine","Dream","Innovate","Experiment","Play","Create","Design",
+          "Envision","Invent","Inspire","Wonder","Explore","Craft","Generate",
+          "Conceive","Visualize","Ideate","Originate","Pioneer","Forge"
+        ],
+        patterns: [
+          "Experiment freely",
+          "Play with possibilities",
+          "Dream without limits",
+          "Innovate through iteration"
+        ]
+      },
+      Deconstruction: {
+        description: "Breaking down complexity",
+        superWords: [
+          "Disassemble","Decompose","Analyze","Break","Separate","Divide",
+          "Split","Partition","Segment","Dissect","Unravel","Decode","Parse",
+          "Fragment","Atomize","Reduce","Simplify","Extract","Isolate","Differentiate"
+        ],
+        patterns: [
+          "Break into components",
+          "Analyze each element",
+          "Decode relationships",
+          "Extract core principles"
+        ]
+      },
+      Synthesis: {
+        description: "Advanced pattern recognition",
+        superWords: [
+          "Pattern","Connect","Associate","Link","Correlate","Map","Network",
+          "Bridge","Weave","Integrate","Synthesize","Unite","Combine","Merge",
+          "Blend","Fuse","Join","Bond","Synchronize","Harmonize"
+        ],
+        patterns: [
+          "Recognize patterns",
+          "Connect insights",
+          "Map relationships",
+          "Synthesize findings"
+        ]
+      },
+      Mindset: {
+        description:
+          "Destroy your mental blocks, transcend negativity, run the mental asylum how you see fit",
+        superWords: [
+          "Unshakeable","Dominance","ZenMaster","EgoSlayer","Rewire","ClarityBlast",
+          "MentalEdge","BulletproofFocus","OvercomeFear","PsycheShift","InnerBeast",
+          "SteelResolve","GritEnforcer","BrainRebirth","SoulHack","EdgeLord",
+          "SelfTranscendence","VortexMind","GammaMind","InfinitePsyche"
+        ],
+        patterns: [
+          "Devise a daily reflection routine to purge mental baggage",
+          "Visualize unstoppable mental clarity for 5 minutes each morning",
+          "Journal 3 limiting beliefs, then burn them mentally",
+          "Self-hypnosis technique: Rewire negative self-talk into savage positivity",
+          "Create a mantra for unstoppable confidence repeated thrice daily",
+          "Gamify challenges: each fear conquered is +100 mental XP",
+          "Integrate “micro-meditations” on your phone alarms",
+          "Affirm your monstrous self-worth upon every reflection in mirror",
+          "Deep breath + Mind re-center after each triggered emotional wave",
+          "Weekly mental detox ritual: disclaim your illusions out loud",
+          "Tie each mental milestone to a personal reward (cupcake or chaos?)",
+          "Self-therapy session using bullet journaling daily for 7 min",
+          "Morning sprints to pump adrenaline & break mental fences",
+          "Commit to absolute mental dominion: no half measures, no surrender",
+          "Practice “Fuck negativity” chanting to break patterns of self-doubt",
+          "End-of-day introspection, track triggers, vow to not repeat them",
+          "Scream in a pillow thrice for stress relief & comedic effect",
+          "Replace anxious thought with comedic cartoon visual in your head",
+          "Claim your unstoppable will before starting tasks",
+          "Sporadic minute of “Eyes shut, deep breath” during tough sh*t"
+        ]
+      },
+      Productivity: {
+        description:
+          "Crank up your day, devour tasks, become unstoppable at finishing what you start",
+        superWords: [
+          "TimeSlicer","TaskCrunch","FlowMaster","DeadlineDominator","MultitaskBeast",
+          "HyperScheduler","FocusSurge","ChaosTamer","BulletTask","FinishLine",
+          "TimeBender","TurboFocus","RapidFire","DoOrDie","UnendingFlow","ScheduleSlam",
+          "LaserLock","WorkFrenzy","TaskVortex","Executioner"
+        ],
+        patterns: [
+          "Time block for top priority tasks, no mercy to distractions",
+          "Apply Pomodoro with savage intervals of 25 minutes, 5 min break",
+          "Turn your phone into airplane mode during deep work intervals",
+          "Sort tasks by “Blood & Fire” urgency approach: do the toughest first",
+          "Celebrate small wins with a sinister grin to keep momentum",
+          "Schedule daily reviews before bed, plan tomorrow’s kills",
+          "Automate or delegate trivial tasks – cut the bullshit jobs",
+          "Remind yourself: half-ass is no path to greatness, go all-in",
+          "Set micro-deadlines for each subtask & track with a timer",
+          "Reward streaks: after 3 days of brutal hustle, treat yourself",
+          "Aim for 1% improvement daily, compounding like a disease",
+          "Stay ruthless: if it’s not vital, cut it from your schedule",
+          "Team synergy: hold accountability calls with your accomplices",
+          "Track how you waste time, destroy those time sinks daily",
+          "Frontload the day: do the scariest tasks first thing in morning",
+          "Batch tasks of the same type to reduce context-switch overhead",
+          "Maintain a scoreboard of undone tasks—clean it daily, no excuses",
+          "Plan weekly sprints with a final boss task to conquer Sunday",
+          "Stop perfecting, start finishing: done is better than perfect",
+          "Use a “Power Hour” tactic: 60 min of unstoppable, no-break focus"
+        ]
+      },
+      Finance: {
+        description:
+          "Build unstoppable wealth strategy. Command that cash flow with reckless brilliance",
+        superWords: [
+          "MoneyMonger","IncomeBlast","PortfolioFlex","AssetNinja","RiskTaker","MidasTouch",
+          "CryptoConqueror","ROIOverlord","CashFlowWizard","FinancialGorilla","CompoundCrazy",
+          "BudgetSlayer","CapitalCrusher","FreestyleFunding","InflationKiller","CostCutter",
+          "ProfitHunter","RevenueRampage","FortuneFrenzy","FiReEnabler"
+        ],
+        patterns: [
+          "Daily track of income/expense with savage honesty",
+          "Automate saving: route 10% of income to no-touch account",
+          "Follow the money flow to find fat you can slice from your expenses",
+          "Invest monthly in diversified index if you’re risk-cautious, cryptos if risk-lunatic",
+          "Study one new wealth-building strategy weekly (real estate, stock options, etc.)",
+          "Monetize your existing skills with a side hustle you can stand behind",
+          "Use fear as fuel to never go broke again; set 'never-broke' threshold",
+          "Take 1hr weekly to pitch or upsell something for extra income",
+          "Track net worth monthly to see your scoreboard grow",
+          "Keep a “F U Fund” for random do-or-die opportunities or emergencies",
+          "Live on less than you earn, but funnel that difference into investments fast",
+          "Flip some quick deals on eBay or Craigslist for capital injection",
+          "Do a monthly subscription purge: kill worthless recurring charges",
+          "Learn tax strategies: keep more of what you earn legally, no illusions",
+          "Aim for multiple income streams, so one failure doesn’t kill you",
+          "Revisit big financial goals each quarter, raise the bar each time",
+          "Use community or mastermind groups for accountability & stock picks",
+          "If you can’t expand income, slash expenses brutally for a while",
+          "Never rely on a single paycheck—hunt for opportunities relentlessly",
+          "Reward yourself with a small indulgence each time a big net-worth milestone is hit"
+        ]
+      }
+    };
+
+    const FRAMEWORKS = {
+      "Layered Persona Stacking": {
+        description:
+          "Assign multiple personas (creative, skeptic, pragmatic) to tackle a problem from unique angles, then synthesize their outputs.",
+        examples: [
+          "- Persona 1 (Optimist): Highlight upsides of XXX.\n- Persona 2 (Critic): Identify weaknesses in XXX.\n- Persona 3 (Engineer): Propose workable solutions for XXX."
+        ],
+        bestUseCases: [
+          "- Complex brainstorming",
+          "- Policy-making with balanced views",
+          "- Product design from multiple angles"
+        ],
+        topUseCaseCategory: "All",
+        frameworkBlend:
+          "Works well with 'Multi-Lens Framework' and 'Self-Critique + Improvement Loop'.",
+        additionalInsights:
+          "Forces LLM to consider conflicting inputs, yielding richer outputs.",
+        consAndLikelihood: "Overcomplex if simple (40%). Possible redundancy (25%).",
+        suggestionsForOptimization: [
+          "- Pre-define personas clearly",
+          "- Limit to 2–3 personas",
+          "- Merge insights periodically"
+        ]
+      },
+      "Forced Minimalism": {
+        description:
+          "Limit responses to minimal words first to extract core insights, then expand.",
+        examples: [
+          "- 1-word solution, then 1-sentence, then 3-sentences.\n- Distill complex idea to essence.\n- Re-expand afterward."
+        ],
+        bestUseCases: [
+          "- Clarity & simplicity",
+          "- Core concept extraction",
+          "- Avoiding fluff"
+        ],
+        topUseCaseCategory: "All",
+        frameworkBlend: "Use with 'Black Box Thinking' for simpler solutions.",
+        additionalInsights:
+          "Identifies key points quickly before building them out.",
+        consAndLikelihood: "Might oversimplify (20%).",
+        suggestionsForOptimization: [
+          "- Expand detail gradually",
+          "- Compare minimal vs. full version",
+          "- Stop expanding if clarity is lost"
+        ]
+      }
+      // ...Add or merge more frameworks if needed
+    };
+
+    // ---------------------------------------------------
+    // 2) Global State (Vanilla) - localStorage for usage, etc.
+    // ---------------------------------------------------
+    let selectedCategories = [];
+    let generatedPrompt = "";
+    let activeTab = "generator";
+    let usageStats = {};
+    let historyList = [];
+
+    // Load from localStorage
+    function loadState() {
+      const savedHistory = localStorage.getItem("promptHistory");
+      const savedUsage = localStorage.getItem("usageStats");
+      if(savedHistory) {
+        historyList = JSON.parse(savedHistory);
+      }
+      if(savedUsage) {
+        usageStats = JSON.parse(savedUsage);
+      } else {
+        // Initialize usageStats
+        usageStats = {};
+        Object.keys(CATEGORIES).forEach(cat => {
+          usageStats[cat] = 0;
+        });
+      }
+    }
+
+    // Save to localStorage
+    function saveHistory() {
+      localStorage.setItem("promptHistory", JSON.stringify(historyList));
+    }
+    function saveUsageStats() {
+      localStorage.setItem("usageStats", JSON.stringify(usageStats));
+    }
+
+    // ---------------------------------------------------
+    // 3) DOM References
+    // ---------------------------------------------------
+    const generatorSection = document.getElementById("generator-section");
+    const analyticsSection = document.getElementById("analytics-section");
+    const historySection = document.getElementById("history-section");
+    const settingsSection = document.getElementById("settings-section");
+    const aiChatSection = document.getElementById("aichat-section");
+
+    const selectedCatsEl = document.getElementById("selectedCategories");
+    const categorySelectionEl = document.getElementById("categorySelection");
+    const generatePromptBtn = document.getElementById("generatePromptBtn");
+    const generatedPromptCard = document.getElementById("generatedPromptCard");
+    const generatedPromptOutput = document.getElementById("generatedPromptOutput");
+
+    const usagePieChartEl = document.getElementById("usagePieChart");
+    const usageBarChartEl = document.getElementById("usageBarChart");
+
+    const historyListEl = document.getElementById("historyList");
+    const exportHistoryBtn = document.getElementById("exportHistoryBtn");
+
+    const newCategoryInput = document.getElementById("newCategoryInput");
+    const addCategoryBtn = document.getElementById("addCategoryBtn");
+
+    const chatMessagesEl = document.getElementById("chatMessages");
+    const chatInputEl = document.getElementById("chatInput");
+    const chatSendBtn = document.getElementById("chatSendBtn");
+
+    // Tabs
+    const tabsEl = document.getElementById("tabs");
+    const tabButtons = tabsEl.querySelectorAll("button");
+
+    // ---------------------------------------------------
+    // 4) Initialize + Event Listeners
+    // ---------------------------------------------------
+    loadState();
+    buildCategorySelection();
+    updateGenerateButtonState();
+    renderHistory();
+    initTabs();
+    initDragAndDrop();
+    initChat();
+
+    // Rebuild charts on analytics tab show
+    renderAnalytics();
+
+    // ---------------------------------------------------
+    // TABS LOGIC
+    // ---------------------------------------------------
+    function initTabs() {
+      tabButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tab = btn.getAttribute("data-tab");
+          switchTab(tab);
+        });
+      });
+    }
+
+    function switchTab(tabName) {
+      activeTab = tabName;
+      // reset tab button styles
+      tabButtons.forEach(btn => {
+        btn.classList.remove("bg-red-500","text-white");
+        btn.classList.add("text-gray-400");
+      });
+      // highlight the active one
+      const activeBtn = tabsEl.querySelector(`[data-tab='${tabName}']`);
+      activeBtn.classList.add("bg-red-500","text-white");
+      activeBtn.classList.remove("text-gray-400");
+
+      // show/hide sections
+      generatorSection.classList.add("hidden");
+      analyticsSection.classList.add("hidden");
+      historySection.classList.add("hidden");
+      settingsSection.classList.add("hidden");
+      aiChatSection.classList.add("hidden");
+
+      if(tabName === "generator") generatorSection.classList.remove("hidden");
+      if(tabName === "analytics") analyticsSection.classList.remove("hidden");
+      if(tabName === "history") historySection.classList.remove("hidden");
+      if(tabName === "settings") settingsSection.classList.remove("hidden");
+      if(tabName === "aichat") aiChatSection.classList.remove("hidden");
+
+      if(tabName === "analytics") {
+        renderAnalytics();
+      }
+    }
+
+    // ---------------------------------------------------
+    // DRAG & DROP for selected categories
+    // ---------------------------------------------------
+    function initDragAndDrop() {
+      new Sortable(selectedCatsEl, {
+        animation: 150,
+        onEnd: function(evt) {
+          // reorder selectedCategories array
+          const oldIndex = evt.oldIndex;
+          const newIndex = evt.newIndex;
+          const movedItem = selectedCategories.splice(oldIndex, 1)[0];
+          selectedCategories.splice(newIndex, 0, movedItem);
+        }
+      });
+    }
+
+    // ---------------------------------------------------
+    // BUILD Category Selection List
+    // ---------------------------------------------------
+    function buildCategorySelection() {
+      categorySelectionEl.innerHTML = "";
+      Object.entries(CATEGORIES).forEach(([catName, data]) => {
+        const isSelected = selectedCategories.includes(catName);
+        const borderClass = isSelected ? "border-red-500 bg-gray-900" : "border-gray-700 hover:border-red-700 bg-gray-800";
+        const textClass = isSelected ? "text-red-500" : "text-gray-400";
+
+        const div = document.createElement("div");
+        div.className = `p-4 rounded-lg border cursor-pointer transition-all ${borderClass}`;
+        
+        const headerDiv = document.createElement("div");
+        headerDiv.className = "flex justify-between items-center mb-2";
+
+        const titleEl = document.createElement("h3");
+        titleEl.className = "text-base font-medium text-gray-100";
+        titleEl.textContent = catName;
+
+        const dotEl = document.createElement("span");
+        dotEl.className = `text-sm ${textClass}`;
+        dotEl.textContent = isSelected ? "●" : "○";
+
+        headerDiv.appendChild(titleEl);
+        headerDiv.appendChild(dotEl);
+
+        const descEl = document.createElement("p");
+        descEl.className = "text-sm text-gray-400 mb-2";
+        descEl.textContent = data.description;
+
+        // details (superWords + patterns) if selected
+        let detailsDiv = null;
+        if(isSelected) {
+          detailsDiv = document.createElement("div");
+          detailsDiv.className = "mt-3 border-t border-gray-700 pt-3";
+
+          const swLabel = document.createElement("span");
+          swLabel.className = "text-gray-300";
+          swLabel.textContent = "Super Words:";
+
+          const swContainer = document.createElement("div");
+          swContainer.className = "flex flex-wrap gap-1 mt-1";
+          data.superWords.forEach(word => {
+            const swSpan = document.createElement("span");
+            swSpan.className = "px-2 py-1 bg-gray-700 text-red-400 rounded-full text-xs";
+            swSpan.textContent = word;
+            swContainer.appendChild(swSpan);
+          });
+
+          const patternsLabel = document.createElement("span");
+          patternsLabel.className = "text-gray-300";
+          patternsLabel.textContent = "Patterns:";
+
+          const patternsUl = document.createElement("ul");
+          patternsUl.className = "list-disc ml-4 mt-1 text-gray-400";
+          data.patterns.forEach(pt => {
+            const li = document.createElement("li");
+            li.textContent = pt;
+            patternsUl.appendChild(li);
+          });
+
+          const patternsDiv = document.createElement("div");
+          patternsDiv.className = "text-sm mt-2";
+          patternsDiv.appendChild(patternsLabel);
+          patternsDiv.appendChild(patternsUl);
+
+          detailsDiv.appendChild(swLabel);
+          detailsDiv.appendChild(swContainer);
+          detailsDiv.appendChild(patternsDiv);
+        }
+
+        div.appendChild(headerDiv);
+        div.appendChild(descEl);
+        if(detailsDiv) div.appendChild(detailsDiv);
+
+        // toggle select
+        div.addEventListener("click", () => {
+          if(isSelected) {
+            selectedCategories = selectedCategories.filter(c => c !== catName);
+          } else {
+            selectedCategories.push(catName);
+          }
+          buildSelectedCategories();
+          buildCategorySelection();
+          updateGenerateButtonState();
+        });
+
+        categorySelectionEl.appendChild(div);
+      });
+    }
+
+    // Build the horizontal row of selected categories
+    function buildSelectedCategories() {
+      selectedCatsEl.innerHTML = "";
+      selectedCategories.forEach(cat => {
+        const span = document.createElement("div");
+        span.className = "px-3 py-1 bg-red-600 text-white rounded-full cursor-move";
+        span.textContent = cat;
+        selectedCatsEl.appendChild(span);
+      });
+    }
+
+    // ---------------------------------------------------
+    // GENERATE PROMPT
+    // ---------------------------------------------------
+    function updateGenerateButtonState() {
+      if(selectedCategories.length > 0) {
+        generatePromptBtn.classList.remove("bg-gray-700","text-gray-500","cursor-not-allowed");
+        generatePromptBtn.classList.add("bg-red-500","hover:bg-red-600","text-white");
+      } else {
+        generatePromptBtn.classList.remove("bg-red-500","hover:bg-red-600","text-white");
+        generatePromptBtn.classList.add("bg-gray-700","text-gray-500","cursor-not-allowed");
+      }
+    }
+
+    generatePromptBtn.addEventListener("click", () => {
+      if(selectedCategories.length === 0) return;
+      let workflow = selectedCategories.map(cat => {
+        const data = CATEGORIES[cat];
+        if(!data) return null;
+        const superWord = data.superWords[Math.floor(Math.random() * data.superWords.length)];
+        const pattern = data.patterns[Math.floor(Math.random() * data.patterns.length)];
+        return { category: cat, prompt: superWord + " → " + pattern };
+      });
+      workflow = workflow.filter(x => x !== null);
+
+      let promptText = workflow.map(item => `${item.category}:\n${item.prompt}`).join("\n\n");
+
+      // update usage stats
+      selectedCategories.forEach(cat => {
+        usageStats[cat] = Math.min(100, (usageStats[cat] || 0) + 10);
+      });
+      saveUsageStats();
+
+      // add to history
+      const entry = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        content: promptText,
+        categories: [...selectedCategories]
+      };
+      historyList.unshift(entry);
+      saveHistory();
+
+      // show prompt
+      generatedPrompt = promptText;
+      generatedPromptOutput.textContent = generatedPrompt;
+      generatedPromptCard.classList.remove("hidden");
+      // re-render history
+      renderHistory();
+    });
+
+    // ---------------------------------------------------
+    // HISTORY
+    // ---------------------------------------------------
+    function renderHistory() {
+      historyListEl.innerHTML = "";
+      if(historyList.length === 0) {
+        const p = document.createElement("p");
+        p.className = "text-gray-400";
+        p.textContent = "No history available.";
+        historyListEl.appendChild(p);
+        return;
+      }
+      historyList.forEach(item => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "p-4 bg-gray-900 rounded-lg border border-gray-700";
+
+        // categories
+        const catContainer = document.createElement("div");
+        catContainer.className = "flex flex-wrap gap-2 mb-2";
+        item.categories.forEach(cat => {
+          const span = document.createElement("span");
+          span.className = "text-xs px-2 py-1 bg-gray-800 text-red-400 rounded-full";
+          span.textContent = cat;
+          catContainer.appendChild(span);
+        });
+
+        const pre = document.createElement("pre");
+        pre.className = "whitespace-pre-wrap text-sm font-mono text-green-400";
+        pre.textContent = item.content;
+
+        const timeDiv = document.createElement("div");
+        timeDiv.className = "text-xs text-gray-500 mt-2";
+        timeDiv.textContent = new Date(item.timestamp).toLocaleString();
+
+        wrapper.appendChild(catContainer);
+        wrapper.appendChild(pre);
+        wrapper.appendChild(timeDiv);
+        historyListEl.appendChild(wrapper);
+      });
+    }
+
+    exportHistoryBtn.addEventListener("click", () => {
+      const dataStr = JSON.stringify(historyList, null, 2);
+      const blob = new Blob([dataStr], {type: "application/json"});
+      saveAs(blob, "prompt_history.json");
+    });
+
+    // ---------------------------------------------------
+    // ADD CATEGORY
+    // ---------------------------------------------------
+    addCategoryBtn.addEventListener("click", () => {
+      const cat = newCategoryInput.value.trim();
+      if(!cat) return;
+      if(!CATEGORIES[cat]) {
+        CATEGORIES[cat] = {
+          description: "Custom user-created category. Expand as needed.",
+          superWords: [],
+          patterns: []
+        };
+      }
+      selectedCategories.push(cat);
+      newCategoryInput.value = "";
+      buildCategorySelection();
+      buildSelectedCategories();
+      updateGenerateButtonState();
+    });
+
+    // ---------------------------------------------------
+    // ANALYTICS (Chart.js)
+    // ---------------------------------------------------
+    let pieChartInstance = null;
+    let barChartInstance = null;
+
+    function renderAnalytics() {
+      // build data array
+      const dataArr = Object.entries(usageStats).map(([name, value]) => {
+        return { name, value };
+      });
+
+      if(!dataArr.length) return;
+
+      if(pieChartInstance) pieChartInstance.destroy();
+      if(barChartInstance) barChartInstance.destroy();
+
+      // Pie chart
+      pieChartInstance = new Chart(usagePieChartEl, {
+        type: "pie",
+        data: {
+          labels: dataArr.map(x => x.name),
+          datasets: [{
+            data: dataArr.map(x => x.value),
+            backgroundColor: ["#FF6384","#36A2EB","#FFCE56","#8A2BE2","#00FA9A","#FF7F50"]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+
+      // Bar chart
+      barChartInstance = new Chart(usageBarChartEl, {
+        type: "bar",
+        data: {
+          labels: dataArr.map(x => x.name),
+          datasets: [{
+            label: "Usage",
+            data: dataArr.map(x => x.value),
+            backgroundColor: "#FF6384"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: "#ccc" } },
+            y: { ticks: { color: "#ccc" } }
+          }
+        }
+      });
+    }
+
+    // ---------------------------------------------------
+    // AI CHAT
+    // ---------------------------------------------------
+    function initChat() {
+      chatSendBtn.addEventListener("click", sendChatMessage);
+    }
+
+    function sendChatMessage() {
+      const val = chatInputEl.value.trim();
+      if(!val) return;
+      const userMsg = {
+        id: Date.now(),
+        text: val,
+        sender: "user"
+      };
+      appendChatMessage(userMsg);
+      // Fake AI response
+      const botMsg = {
+        id: Date.now()+1,
+        text: `Placeholder LLM response to: "${val}"`,
+        sender: "bot"
+      };
+      appendChatMessage(botMsg);
+      chatInputEl.value = "";
+    }
+
+    function appendChatMessage(msg) {
+      const div = document.createElement("div");
+      div.className = `p-2 rounded-md max-w-lg ${
+        msg.sender === "user" 
+          ? "bg-red-600 text-white self-end" 
+          : "bg-gray-700 text-gray-100 self-start"
+      }`;
+      div.textContent = (msg.sender === "user" ? "You: " : "AI: ") + msg.text;
+      chatMessagesEl.appendChild(div);
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+
+  </script>
+</body>
+</html>
