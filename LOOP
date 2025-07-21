@@ -1,0 +1,91 @@
+
+⸻
+
+1 📦 Structure the chaos
+
+Layer	What goes in	Key fields
+Pages	Big buckets (“Idea Generator”, “Reality Shift Analyzer”, etc.)	id, title, description
+Prompt DB	Every single prompt line	id, page_id, prompt_text, tags, complexity_score
+Run Logs	Every time a prompt fires	run_id, prompt_id, llm, inputs, output, rating
+
+Concrete:  Drop this starter JSON schema into a prompts_vault.json; feeds everything else.
+
+⸻
+
+2 🛠️ Auto-Prompt Router (Python + FastAPI, zero fluff)
+
+# router.py
+from fastapi import FastAPI
+from pydantic import BaseModel
+import json, os
+import openai  # or any LLM SDK
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+DB = json.load(open("prompts_vault.json"))
+
+class FireRequest(BaseModel):
+    prompt_id: str
+    context: dict  # dynamic inserts (project, persona, etc.)
+    model: str = "gpt-4o"
+    max_tokens: int = 400
+
+app = FastAPI()
+
+def fill_prompt(tmpl: str, ctx: dict) -> str:
+    for k, v in ctx.items():
+        tmpl = tmpl.replace(f"{{{{{k}}}}}", str(v))
+    return tmpl
+
+@app.post("/fire")
+def fire(req: FireRequest):
+    p_obj = next(p for p in DB["prompts"] if p["id"] == req.prompt_id)
+    final_prompt = fill_prompt(p_obj["prompt_text"], req.context)
+
+    resp = openai.ChatCompletion.create(
+        model=req.model,
+        messages=[{"role": "user", "content": final_prompt}],
+        max_tokens=req.max_tokens,
+        temperature=0.7,
+    )
+    answer = resp.choices[0].message.content
+
+    # 👉 log run (pseudo-code; plug into real store)
+    DB["runs"].append({
+        "run_id": len(DB["runs"])+1,
+        "prompt_id": req.prompt_id,
+        "llm": req.model,
+        "inputs": req.context,
+        "output": answer
+    })
+    return {"answer": answer}
+
+Runs locally on both your 2013 Pro & M2 Air; no Docker, no bloat.
+
+⸻
+
+3 ⚡ Feedback loop – make it vicious
+
+# rate.py
+def auto_rate(output: str) -> int:
+    # naive quality heuristic – swap with your own scorer
+    return min(10, max(1, len(output)//200))
+
+for run in DB["runs"]:
+    if "rating" not in run:
+        run["rating"] = auto_rate(run["output"])
+        if run["rating"] >= 8:
+            # escalate winning outputs into new prompts
+            DB["prompts"].append({
+                "id": f"auto_{run['run_id']}",
+                "page_id": "derived",
+                "prompt_text": run["output"],
+                "tags": ["recycled"],
+                "complexity_score": run["rating"]
+            })
+json.dump(DB, open("prompts_vault.json", "w"), indent=2)
+
+
+⸻
+
+
+
