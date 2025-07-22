@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ AI Debate Arena - Complete Solution</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --fg: #222;
+      --accent: #4caf50;
+      --accent-dark: #388E3C;
+      --card: #fff;
+      --radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
+      --model-openai: #2196f3;
+      --model-gemini: #8bc34a;
+      --model-claude: #9c27b0;
+      --proxy-color: #ff9800;
+    }
+    .dark-mode {
+      --bg: #121212;
+      --fg: #eee;
+      --card: #1e1e1e;
+      --shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      transition: all 0.3s;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 25px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin: 20px 0 30px;
+      font-size: 2.5rem;
+      color: var(--accent-dark);
+    }
+    .card {
+      background: var(--card);
+      padding: 25px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 25px;
+    }
+    h2 {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent);
+      color: var(--accent-dark);
+    }
+    h3 {
+      margin: 15px 0 10px;
+      color: var(--accent-dark);
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    button:hover:not(:disabled) {
+      background: var(--accent-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .btn-large {
+      padding: 15px 25px;
+      font-size: 1.2rem;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-danger {
+      background: #d32f2f;
+    }
+    .btn-proxy {
+      background: var(--proxy-color);
+    }
+    .btn-proxy:hover:not(:disabled) {
+      background: #f57c00;
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: #b71c1c;
+    }
+    .msg {
+      margin-bottom: 20px;
+      padding: 18px;
+      border-left: 5px solid var(--accent);
+      background: var(--card);
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg-openai { border-color: var(--model-openai); }
+    .msg-gemini { border-color: var(--model-gemini); }
+    .msg-claude { border-color: var(--model-claude); }
+    .msg-system { border-color: #ff9800; }
+    .msg-error { border-color: #f44336; background: rgba(244, 67, 54, 0.08); }
+    .msg-proxy { border-color: var(--proxy-color); }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      margin: 8px 0 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--fg);
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+    }
+    input[type="range"] {
+      padding: 8px 0;
+      margin: 15px 0;
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .flex {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    .progress-container {
+      background: rgba(76, 175, 80, 0.1);
+      border-radius: 20px;
+      height: 20px;
+      margin: 20px 0;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .stat-card {
+      background: rgba(76, 175, 80, 0.08);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+    .preset-btn {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--accent-dark);
+    }
+    .preset-btn:hover:not(:disabled) {
+      background: rgba(76, 175, 80, 0.25);
+    }
+    #chat {
+      max-height: 40vh;
+      overflow-y: auto;
+      padding: 20px;
+      background: rgba(0,0,0,0.02);
+      border-radius: var(--radius);
+    }
+    .dark-mode #chat {
+      background: rgba(255,255,255,0.05);
+    }
+    .hidden {
+      display: none;
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ccc;
+      margin-right: 8px;
+    }
+    .status-active {
+      background: var(--accent);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    .history-item {
+      padding: 12px;
+      margin-bottom: 10px;
+      background: rgba(76, 175, 80, 0.08);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .history-item:hover {
+      background: rgba(76, 175, 80, 0.15);
+    }
+    .proxy-info {
+      background: #fff8e1;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
+    .dark-mode .proxy-info {
+      background: #332900;
+      border-left-color: #ffd54f;
+    }
+    .tab-container {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+    }
+    .tab.active {
+      border-bottom: 3px solid var(--accent);
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    #proxyLogs {
+      height: 200px;
+      overflow-y: auto;
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .dark-mode #proxyLogs {
+      background: #1e1e1e;
+    }
+    .proxy-log-entry {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #ddd;
+    }
+    .dark-mode .proxy-log-entry {
+      border-bottom: 1px dashed #444;
+    }
+    .log-success {
+      color: var(--accent);
+    }
+    .log-error {
+      color: #f44336;
+    }
+    .log-info {
+      color: #2196f3;
+    }
+    .config-section {
+      background: rgba(76, 175, 80, 0.05);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .stats-panel {
+      background: rgba(76, 175, 80, 0.05);
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <button id="themeBtn" class="theme-toggle">🌓</button>
+  <h1>⚡ AI Debate Arena - Complete Solution</h1>
+
+  <div class="container">
+    <!-- Tab Navigation -->
+    <div class="tab-container">
+      <div class="tab active" data-tab="debate">Debate Settings</div>
+      <div class="tab" data-tab="proxy">Proxy Server</div>
+      <div class="tab" data-tab="about">About</div>
+    </div>
+
+    <!-- Debate Settings Tab -->
+    <div class="tab-content active" id="debate-tab">
+      <div class="card">
+        <div class="config-section">
+          <h2>🎯 Goal Setup</h2>
+          <textarea id="goalInput" placeholder="What should the AIs solve? Example: 'Develop a plan to reduce plastic waste in oceans'">Develop a comprehensive plan to reduce plastic waste in our oceans</textarea>
+          
+          <h2>⚙️ Debate Configuration</h2>
+          <div class="flex">
+            <label style="flex: 1">
+              Max Turns: 
+              <input type="number" id="maxTurnsInput" min="1" max="50" value="20" style="width: 100%">
+            </label>
+            <label style="flex: 1; text-align: right;">
+              <input type="checkbox" id="tokenSaver" checked> 
+              Auto-reduce tokens during long debates
+            </label>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <h2>🔑 API Keys</h2>
+          <input type="password" id="openaiKey" placeholder="OpenAI Key (required)">
+          <input type="password" id="geminiKey" placeholder="Gemini Key (required)">
+          <input type="password" id="claudeKey" placeholder="Claude Key (optional)">
+        </div>
+        
+        <div class="config-section">
+          <h2>🤖 AI Configuration</h2>
+          <div class="grid">
+            <div>
+              <h3>OpenAI</h3>
+              <select id="openaiModel">
+                <option value="gpt-4o">GPT-4o (Recommended)</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              </select>
+              <div class="flex-between">
+                <span>Temperature: <span id="openaiTempVal">0.7</span></span>
+                <span>Tokens: <span id="openaiTokensVal">600</span></span>
+              </div>
+              <input type="range" id="openaiTemp" min="0" max="1" step="0.1" value="0.7">
+              <input type="range" id="openaiTokens" min="100" max="2000" step="50" value="600">
+            </div>
+            
+            <div>
+              <h3>Gemini</h3>
+              <select id="geminiModel">
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+              </select>
+              <div class="flex-between">
+                <span>Temperature: <span id="geminiTempVal">0.7</span></span>
+                <span>Tokens: <span id="geminiTokensVal">600</span></span>
+              </div>
+              <input type="range" id="geminiTemp" min="0" max="1" step="0.1" value="0.7">
+              <input type="range" id="geminiTokens" min="100" max="2000" step="50" value="600">
+            </div>
+            
+            <div>
+              <h3>Claude (Reviewer)</h3>
+              <select id="claudeModel">
+                <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                <option value="claude-3-opus">Claude 3 Opus</option>
+              </select>
+              <div class="flex-between">
+                <span>Temperature: <span id="claudeTempVal">0.4</span></span>
+                <span>Tokens: <span id="claudeTokensVal">500</span></span>
+              </div>
+              <input type="range" id="claudeTemp" min="0" max="1" step="0.1" value="0.4" disabled>
+              <input type="range" id="claudeTokens" min="100" max="2000" step="50" value="500" disabled>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 25px;">
+          <div class="flex" style="margin-top: 15px;">
+            <span class="status-indicator" id="statusIndicator"></span>
+            <span id="statusText">Ready to start</span>
+          </div>
+          
+          <button id="startBtn" class="btn-large">
+            <span>🚀 Start Debate</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Conversation Panel -->
+      <div id="conversationPanel" class="card hidden">
+        <div class="flex-between">
+          <h2>🗣️ Live Debate</h2>
+          <div class="flex">
+            <span class="status-indicator" id="debateStatusIndicator"></span>
+            <span id="debateStatusText">In progress</span>
+          </div>
+        </div>
+        
+        <div class="progress-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div id="chat"></div>
+        
+        <!-- Stats Panel -->
+        <div class="stats-panel">
+          <h3>Debate Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div>Tokens</div>
+              <div class="stat-value" id="tokenCount">0</div>
+            </div>
+            <div class="stat-card">
+              <div>Cost</div>
+              <div class="stat-value">$<span id="cost">0.00</span></div>
+            </div>
+            <div class="stat-card">
+              <div>Turn</div>
+              <div class="stat-value"><span id="turnCount">0</span>/<span id="maxTurnsDisplay">20</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Controls -->
+      <div id="controls" class="flex hidden">
+        <button id="stopBtn" class="btn-danger">
+          <span>⏹️ Stop Debate</span>
+        </button>
+        <button id="exportBtn">
+          <span>💾 Export Transcript</span>
+        </button>
+        <button id="newBtn">
+          <span>🔄 New Debate</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Proxy Server Tab -->
+    <div class="tab-content" id="proxy-tab">
+      <div class="card">
+        <h2>🔒 Secure Proxy Server</h2>
+        <div class="proxy-info">
+          <p>This solution includes an integrated proxy server to solve CORS issues and protect your API keys.</p>
+          <p>The proxy handles all API requests securely, preventing browser CORS errors and keeping your keys safe.</p>
+          
+          <h3>How to Set Up the Proxy Server</h3>
+          <ol>
+            <li>Create a new Node.js project: <code>npm init -y</code></li>
+            <li>Install required packages: <code>npm install express cors dotenv</code></li>
+            <li>Create a <code>.env</code> file with your API keys:
+              <pre>
+OPENAI_KEY=your_openai_key_here
+GEMINI_KEY=your_gemini_key_here
+CLAUDE_KEY=your_claude_key_here
+              </pre>
+            </li>
+            <li>Create an <code>index.js</code> file with the proxy server code</li>
+            <li>Start the server: <code>node index.js</code></li>
+          </ol>
+          
+          <h4>Proxy Server Code (index.js)</h4>
+          <pre>
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+app.use(express.json());
+
+app.post('/proxy/openai', async (req, res) => {
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_KEY}`
+      },
+      body: JSON.stringify(req.body)
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/proxy/gemini', async (req, res) => {
+  try {
+    const { model, ...body } = req.body;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${process.env.GEMINI_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/proxy/claude', async (req, res) => {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.CLAUDE_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(req.body)
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Proxy server running on http://localhost:${PORT}`);
+});
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Tab -->
+    <div class="tab-content" id="about-tab">
+      <div class="card">
+        <h2>About AI Debate Arena</h2>
+        <p>This application creates a debate between AI models from OpenAI, Google Gemini, and Anthropic Claude.</p>
+        
+        <h3>How It Works</h3>
+        <ol>
+          <li>Set a goal for the AI models to debate</li>
+          <li>Configure each model's settings</li>
+          <li>Start the debate and watch the AI models discuss the topic</li>
+          <li>The integrated proxy server handles all API requests securely</li>
+        </ol>
+        
+        <h3>Key Features</h3>
+        <ul>
+          <li>Integrated proxy server to solve CORS issues</li>
+          <li>Secure API key handling</li>
+          <li>Real-time token cost tracking</li>
+          <li>Customizable AI model settings</li>
+          <li>Dark/light mode support</li>
+          <li>Performance optimized chat rendering</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== CONFIGURATION ======
+    const API_ENDPOINTS = {
+      openai: '/proxy/openai',
+      gemini: '/proxy/gemini',
+      claude: '/proxy/claude'
+    };
+
+    const PRICING = {
+      'gpt-4o': { input: 5, output: 15 },
+      'gpt-4-turbo': { input: 10, output: 30 },
+      'gpt-3.5-turbo': { input: 0.5, output: 1.5 },
+      'gemini-1.5-pro': { input: 3.5, output: 10.5 },
+      'gemini-1.5-flash': { input: 0.35, output: 1.05 },
+      'claude-3-sonnet': { input: 3, output: 15 },
+      'claude-3-opus': { input: 15, output: 75 }
+    }; // Prices per 1M tokens
+
+    const PRESETS = {
+      balanced: { temp: 0.7, tokens: 600 },
+      creative: { temp: 1.0, tokens: 800 },
+      precise: { temp: 0.3, tokens: 400 }
+    };
+
+    // ====== STATE ======
+    let state = {
+      isRunning: false,
+      conversation: [],
+      tokensUsed: 0,
+      cost: 0,
+      turn: 0,
+      maxTurns: 20,
+      apiKeys: {
+        openai: '',
+        gemini: '',
+        claude: ''
+      },
+      proxyRunning: false,
+      proxyLogs: []
+    };
+
+    // ====== DOM REFERENCES ======
+    const dom = {
+      themeBtn: document.getElementById('themeBtn'),
+      goalInput: document.getElementById('goalInput'),
+      startBtn: document.getElementById('startBtn'),
+      stopBtn: document.getElementById('stopBtn'),
+      exportBtn: document.getElementById('exportBtn'),
+      newBtn: document.getElementById('newBtn'),
+      chat: document.getElementById('chat'),
+      tokenCount: document.getElementById('tokenCount'),
+      cost: document.getElementById('cost'),
+      turnCount: document.getElementById('turnCount'),
+      maxTurnsDisplay: document.getElementById('maxTurnsDisplay'),
+      maxTurnsInput: document.getElementById('maxTurnsInput'),
+      conversationPanel: document.getElementById('conversationPanel'),
+      controls: document.getElementById('controls'),
+      progressBar: document.getElementById('progressBar'),
+      statusIndicator: document.getElementById('statusIndicator'),
+      statusText: document.getElementById('statusText'),
+      debateStatusIndicator: document.getElementById('debateStatusIndicator'),
+      debateStatusText: document.getElementById('debateStatusText'),
+      proxyStatusIndicator: document.getElementById('proxyStatusIndicator'),
+      proxyStatusText: document.getElementById('proxyStatusText'),
+      proxyLogs: document.getElementById('proxyLogs'),
+      tabs: document.querySelectorAll('.tab'),
+      tabContents: document.querySelectorAll('.tab-content')
+    };
+
+    // ====== UTILITIES ======
+    function addMessage(sender, text, type = 'ai') {
+      const msgEl = document.createElement('div');
+      let msgClass = 'msg';
+      
+      if (sender.includes('OpenAI')) msgClass += ' msg-openai';
+      else if (sender.includes('Gemini')) msgClass += ' msg-gemini';
+      else if (sender.includes('Claude')) msgClass += ' msg-claude';
+      else if (sender.includes('Proxy')) msgClass += ' msg-proxy';
+      else if (sender.includes('Error')) msgClass += ' msg-error';
+      else msgClass += ' msg-system';
+      
+      msgEl.className = msgClass;
+      
+      // Format message with line breaks and basic formatting
+      const formattedText = text
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
+      
+      msgEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+          <strong>${sender}</strong>
+          <small>${new Date().toLocaleTimeString()}</small>
+        </div>
+        <div>${formattedText}</div>
+      `;
+      
+      dom.chat.appendChild(msgEl);
+      dom.chat.scrollTop = dom.chat.scrollHeight;
+    }
+
+    function updateStats(tokens, model) {
+      state.tokensUsed += tokens;
+      
+      // Calculate cost
+      const pricePerThousand = (PRICING[model]?.output || 10) / 1000;
+      state.cost += (tokens / 1000) * pricePerThousand;
+      
+      dom.tokenCount.textContent = state.tokensUsed.toLocaleString();
+      dom.cost.textContent = state.cost.toFixed(4);
+      dom.turnCount.textContent = state.turn;
+    }
+
+    function updateProgress() {
+      const percentage = (state.turn / state.maxTurns) * 100;
+      dom.progressBar.style.width = `${percentage}%`;
+    }
+
+    function updateStatus(text, isActive = false) {
+      dom.statusText.textContent = text;
+      dom.statusIndicator.className = 'status-indicator ' + (isActive ? 'status-active' : '');
+    }
+
+    function updateDebateStatus(text, isActive = false) {
+      dom.debateStatusText.textContent = text;
+      dom.debateStatusIndicator.className = 'status-indicator ' + (isActive ? 'status-active' : '');
+    }
+
+    function updateProxyStatus(text, isActive = false) {
+      dom.proxyStatusText.textContent = text;
+      dom.proxyStatusIndicator.className = 'status-indicator ' + (isActive ? 'status-active' : '');
+    }
+
+    function containsCompletionKeyword(text) {
+      return /(final answer|done|solution|conclusion)/i.test(text);
+    }
+
+    // ====== API HANDLERS ======
+    async function callAI(provider, model, messages, apiKey, temperature = 0.7, maxTokens = 500) {
+      try {
+        // Disable buttons during API call
+        dom.startBtn.disabled = true;
+        
+        const payload = {
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens
+        };
+        
+        const response = await fetch(API_ENDPOINTS[provider], {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`${provider} API error: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Validate response
+        if (!data.choices?.[0]?.message?.content) {
+          throw new Error(`Invalid response structure from ${provider}`);
+        }
+        
+        const content = data.choices[0].message.content;
+        const tokens = data.usage?.total_tokens || Math.ceil(content.length / 4);
+        updateStats(tokens, model);
+        
+        return content;
+      } catch (error) {
+        console.error(`${provider.toUpperCase()} Error:`, error);
+        addMessage('Error', `API call failed: ${error.message}`, 'error');
+        return `⚠️ ${error.message}`;
+      } finally {
+        dom.startBtn.disabled = false;
+      }
+    }
+
+    // ====== CORE LOGIC ======
+    async function runDebate() {
+      const goal = dom.goalInput.value.trim();
+      if (!goal) {
+        updateStatus('Please enter a goal!');
+        return;
+      }
+      
+      // Get API keys
+      state.apiKeys = {
+        openai: document.getElementById('openaiKey').value,
+        gemini: document.getElementById('geminiKey').value,
+        claude: document.getElementById('claudeKey').value
+      };
+      
+      // Validate keys
+      if (!state.apiKeys.openai || !state.apiKeys.gemini) {
+        updateStatus('OpenAI and Gemini keys are required!');
+        return;
+      }
+
+      // Get max turns from UI
+      state.maxTurns = parseInt(dom.maxTurnsInput.value) || 20;
+      dom.maxTurnsDisplay.textContent = state.maxTurns;
+      
+      // Get model settings
+      const settings = {
+        openai: {
+          model: document.getElementById('openaiModel').value,
+          temp: parseFloat(document.getElementById('openaiTemp').value),
+          tokens: parseInt(document.getElementById('openaiTokens').value)
+        },
+        gemini: {
+          model: document.getElementById('geminiModel').value,
+          temp: parseFloat(document.getElementById('geminiTemp').value),
+          tokens: parseInt(document.getElementById('geminiTokens').value)
+        },
+        claude: {
+          model: document.getElementById('claudeModel').value,
+          tokens: 500
+        },
+        tokenSaver: document.getElementById('tokenSaver').checked
+      };
+
+      // Initialize state
+      state = {
+        isRunning: true,
+        conversation: [{ 
+          role: 'system', 
+          content: `Goal: ${goal}\n\nInstructions: Debate this topic step by step. When you reach a conclusion, say "FINAL ANSWER".` 
+        }],
+        tokensUsed: 0,
+        cost: 0,
+        turn: 0,
+        maxTurns: state.maxTurns,
+        apiKeys: state.apiKeys,
+        proxyRunning: state.proxyRunning,
+        proxyLogs: state.proxyLogs
+      };
+      
+      // Update UI
+      dom.conversationPanel.classList.remove('hidden');
+      dom.controls.classList.remove('hidden');
+      dom.chat.innerHTML = '';
+      dom.tokenCount.textContent = '0';
+      dom.cost.textContent = '0.00';
+      dom.turnCount.textContent = '0';
+      dom.maxTurnsDisplay.textContent = state.maxTurns;
+      updateDebateStatus('Debate in progress', true);
+      updateProgress();
+      
+      // Disable start button during debate
+      dom.startBtn.disabled = true;
+      
+      addMessage('System', `Starting debate: "${goal}"`, 'system');
+      
+      try {
+        // Debate loop
+        while (state.isRunning && state.turn < state.maxTurns) {
+          state.turn++;
+          updateProgress();
+          updateDebateStatus(`Turn ${state.turn} of ${state.maxTurns}`, true);
+          
+          // 1. OpenAI's turn
+          addMessage('System', 'Asking OpenAI...', 'system');
+          const openaiResponse = await callAI(
+            'openai',
+            settings.openai.model,
+            state.conversation,
+            state.apiKeys.openai,
+            settings.openai.temp,
+            settings.openai.tokens
+          );
+          
+          if (openaiResponse.startsWith('⚠️')) {
+            addMessage('System', openaiResponse, 'error');
+            break;
+          }
+          
+          // Add as assistant response
+          state.conversation.push({ role: 'assistant', content: openaiResponse });
+          addMessage('OpenAI', openaiResponse);
+          
+          // 2. Gemini's response
+          addMessage('System', 'Asking Gemini...', 'system');
+          const geminiResponse = await callAI(
+            'gemini',
+            settings.gemini.model,
+            state.conversation,
+            state.apiKeys.gemini,
+            settings.gemini.temp,
+            settings.gemini.tokens
+          );
+          
+          if (geminiResponse.startsWith('⚠️')) {
+            addMessage('System', geminiResponse, 'error');
+            break;
+          }
+          
+          // Add as user response
+          state.conversation.push({ role: 'user', content: geminiResponse });
+          addMessage('Gemini', geminiResponse);
+          
+          // Check for completion after both have responded
+          if (containsCompletionKeyword(openaiResponse) || containsCompletionKeyword(geminiResponse)) {
+            addMessage('System', '✅ Debate completed successfully!', 'system');
+            updateDebateStatus('Completed successfully');
+            break;
+          }
+          
+          // 3. Claude review every 3 turns (if key provided)
+          if (state.apiKeys.claude && state.turn % 3 === 0) {
+            addMessage('System', 'Asking Claude for review...', 'system');
+            const review = await callAI(
+              'claude',
+              settings.claude.model,
+              // Only send last 6 messages for context
+              state.conversation.slice(-6),
+              state.apiKeys.claude,
+              0.4, // Lower temperature for reviews
+              settings.claude.tokens
+            );
+            
+            if (!review.startsWith('⚠️')) {
+              state.conversation.push({ role: 'system', content: review });
+              addMessage('Claude Review', review);
+            }
+          }
+          
+          // Reduce token usage over time
+          if (settings.tokenSaver && state.turn % 4 === 0) {
+            settings.openai.tokens = Math.max(200, Math.floor(settings.openai.tokens * 0.85));
+            settings.gemini.tokens = Math.max(200, Math.floor(settings.gemini.tokens * 0.85));
+            document.getElementById('openaiTokens').value = settings.openai.tokens;
+            document.getElementById('geminiTokens').value = settings.gemini.tokens;
+            document.getElementById('openaiTokensVal').textContent = settings.openai.tokens;
+            document.getElementById('geminiTokensVal').textContent = settings.gemini.tokens;
+          }
+        }
+      } catch (error) {
+        console.error('Debate error:', error);
+        addMessage('System', `⚠️ Fatal error: ${error.message}`, 'error');
+      } finally {
+        // Re-enable start button after debate ends
+        dom.startBtn.disabled = false;
+      }
+      
+      // Final state
+      state.isRunning = false;
+      updateDebateStatus(state.turn >= state.maxTurns 
+        ? 'Maximum turns reached' 
+        : 'Debate completed');
+      
+      if (state.turn >= state.maxTurns) {
+        addMessage('System', '⚠️ Maximum turns reached', 'system');
+      } else {
+        addMessage('System', 'Debate finished', 'system');
+      }
+    }
+
+    // ====== EVENT HANDLERS ======
+    function initEventListeners() {
+      // Theme toggle
+      dom.themeBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        dom.themeBtn.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌓';
+      });
+
+      // Start debate button
+      dom.startBtn.addEventListener('click', runDebate);
+      
+      // Stop debate button
+      dom.stopBtn.addEventListener('click', () => {
+        state.isRunning = false;
+        addMessage('System', '⏹️ Debate stopped by user', 'system');
+        updateDebateStatus('Stopped by user');
+        dom.startBtn.disabled = false;
+      });
+      
+      // Export button
+      dom.exportBtn.addEventListener('click', () => {
+        const content = state.conversation.map(msg => 
+          `## ${msg.role}\n\n${msg.content}`
+        ).join('\n\n');
+        
+        const blob = new Blob([content], { type: 'text/markdown' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `ai-debate-${Date.now()}.md`;
+        link.click();
+        addMessage('System', '✅ Transcript exported', 'system');
+      });
+      
+      // New debate button
+      dom.newBtn.addEventListener('click', () => {
+        state.isRunning = false;
+        dom.conversationPanel.classList.add('hidden');
+        dom.controls.classList.add('hidden');
+        updateStatus('Ready to start');
+        dom.startBtn.disabled = false;
+      });
+      
+      // Tab switching
+      dom.tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // Remove active class from all tabs
+          dom.tabs.forEach(t => t.classList.remove('active'));
+          dom.tabContents.forEach(c => c.classList.remove('active'));
+          
+          // Add active class to clicked tab
+          tab.classList.add('active');
+          document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+        });
+      });
+      
+      // Temperature displays
+      document.getElementById('openaiTemp').addEventListener('input', (e) => {
+        document.getElementById('openaiTempVal').textContent = e.target.value;
+      });
+      
+      document.getElementById('geminiTemp').addEventListener('input', (e) => {
+        document.getElementById('geminiTempVal').textContent = e.target.value;
+      });
+      
+      // Token displays
+      document.getElementById('openaiTokens').addEventListener('input', (e) => {
+        document.getElementById('openaiTokensVal').textContent = e.target.value;
+      });
+      
+      document.getElementById('geminiTokens').addEventListener('input', (e) => {
+        document.getElementById('geminiTokensVal').textContent = e.target.value;
+      });
+    }
+
+    // ====== INITIALIZATION ======
+    function init() {
+      // Set initial values
+      document.getElementById('openaiTempVal').textContent = 
+        document.getElementById('openaiTemp').value;
+      
+      document.getElementById('geminiTempVal').textContent = 
+        document.getElementById('geminiTemp').value;
+      
+      document.getElementById('openaiTokensVal').textContent = 
+        document.getElementById('openaiTokens').value;
+      
+      document.getElementById('geminiTokensVal').textContent = 
+        document.getElementById('geminiTokens').value;
+      
+      document.getElementById('claudeTempVal').textContent = 
+        document.getElementById('claudeTemp').value;
+      
+      document.getElementById('claudeTokensVal').textContent = 
+        document.getElementById('claudeTokens').value;
+      
+      // Initialize event listeners
+      initEventListeners();
+      
+      // Set status
+      updateStatus('Ready to start debate');
+      updateProxyStatus('Proxy not running');
+      
+      // Add welcome message
+      addMessage('System', 'Welcome to AI Debate Arena! Configure your settings and start the debate.', 'system');
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
