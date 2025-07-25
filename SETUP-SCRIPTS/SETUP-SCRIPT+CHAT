@@ -1,0 +1,931 @@
+Gotcha—that was a wall of code. Let’s break it down into bite-size chunks:
+	1.	What it is
+	•	A Next.js page (page.tsx)
+	•	Shows a big header (“Unstoppable AI Domination”)
+	•	Loads your TaskBreakdown component (the heart of all the NLP + agent logic)
+	•	Adds two extra tools:
+	•	KB Expansion button (runs our “scrape + merge” stub)
+	•	Agent Leaderboard toggle (shows current scores in a table)
+	2.	How it works
+	•	<Head> sets the page title/meta.
+	•	<main> wraps everything in your theme (bg, text colors).
+	•	Section 1: <TaskBreakdown />—UI for entering goals, decomposing tasks, picking frameworks, red-team checks, gamified dashboard.
+	•	Section 2: “Additional Tools” with:
+	•	Run KB Expansion → merges scraped + user frameworks (stub)
+	•	Show/Hide Leaderboard → fetches agent scores and pops up a table
+	•	Future Enhancements list for next-gen features you can plug in.
+	•	Footer with your war-cry and year.
+	3.	Next Steps
+	•	Drop that file into src/app/page.tsx.
+	•	Install deps:
+
+npm install react-organizational-chart chart.js react-chartjs-2 axios
+
+
+	•	Wire up your /api/decompose endpoint (or local NLP).
+	•	Plug in your real OpenAI key in AgentOrchestrator.ts.
+	•	Run npm run dev and watch the dashboard come alive.
+
+Tell me where you’re stuck—the layout? the buttons? the imports? I’ll zero in on whatever part’s giving you that “huh?” moment.
+
+
+
+
+
+
+
+# setup_project_structure.py
+import os
+from pathlib import Path
+
+def create_project_structure():
+    """
+    Creates the directory structure and empty files for the
+    Unlocking_Peak_Performance_Project on the user's Desktop.
+    """
+    project_name = "Unlocking_Peak_Performance_Project"
+    desktop_path = Path.home() / 'Desktop'
+    base_dir = desktop_path / project_name
+
+    # Define the directory structure
+    structure = {
+        "multi_agent_system": [
+            "__init__.py", "perception_agent.py", "deliberation_agent.py",
+            "orchestrator.py", "actuation_agent.py", "config.py", "agent_state.py"
+        ],
+        "python_m2_optimization": [
+            "__init__.py", "environment_setup_notes.py", "library_optimization_demo.py",
+            "jit_compilation_demo.py", "hardware_acceleration_demo.py",
+            "concurrency_demo.py", "profiling_utils.py"
+        ],
+        "utils": [
+            "__init__.py", "helpers.py", "constants.py"
+        ],
+        "": [  # Files in the root directory
+            "main_runner.py", "requirements.txt", "README.md"
+        ]
+    }
+
+    # Create base directory
+    base_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Created base directory: {base_dir}")
+
+    # Create subdirectories and files
+    for folder_name, files_list in structure.items():
+        current_dir = base_dir if not folder_name else (base_dir / folder_name)
+        if folder_name:
+            current_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Created sub-directory: {current_dir}")
+
+        for file_name in files_list:
+            file_path = current_dir / file_name
+            file_path.touch(exist_ok=True)
+            print(f"  Created empty file: {file_path}")
+
+    print(f"\nProject structure for '{project_name}' created successfully on your Desktop.")
+    print("You can now populate these files with the provided code.")
+
+if __name__ == "__main__":
+    create_project_structure()
+
+# multi_agent_system/__init__.py
+
+# This file makes the 'multi_agent_system' directory a Python package.
+# It can also be used to expose key components of the package for easier import.
+
+# For example:
+# from .orchestrator import run_orchestration_async, build_agent_graph
+# from .agent_state import AgentState
+
+print("Initializing multi_agent_system package...")
+
+# multi_agent_system/config.py
+# Central configuration for the multi-agent system.
+
+# Example configurations (replace with actual values)
+OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"  # Used for LLM-based deliberation
+DATA_SOURCE_URL = "https://jsonplaceholder.typicode.com/todos/1"  # Example data source
+DEFAULT_AGENT_MODEL = "gpt-3.5-turbo"  # Default LLM model for deliberation agents
+
+AGENT_ROLES = {
+    "perception": "Responsible for ingesting and preprocessing external data.",
+    "deliberation": "Responsible for reasoning, planning, and decision making.",
+    "coordination": "Responsible for managing task flow and agent interactions.",
+    "actuation": "Responsible for executing actions and interacting with external systems."
+}
+
+# Message broker configuration (e.g., RabbitMQ)
+MESSAGE_BROKER_URL = "amqp://guest:guest@localhost:5672/"
+
+# Logging configuration
+LOG_LEVEL = "INFO"
+LOG_FILE_PATH = "multi_agent_system.log"
+
+print("MAS Config Loaded: API Key placeholder set, Data source URL configured.")
+
+# multi_agent_system/agent_state.py
+from typing import TypedDict, Optional, List, Dict, Any
+
+class AgentState(TypedDict):
+    """
+    Represents the state of the multi-agent workflow.
+    """
+    task_description: str
+    input_data: Optional[Any]
+    processed_data: Optional[Any]
+    deliberation_output: Optional[str]
+    intermediate_steps: List[Dict[str, Any]]
+    actuation_command: Optional[Any]
+    final_output: Optional[Any]
+    error_message: Optional[str]
+    current_agent_name: Optional[str]
+    context_summary: Optional[str]
+    available_tools: Optional[List[str]]
+
+# multi_agent_system/perception_agent.py
+import requests
+import json
+from .agent_state import AgentState
+from .config import DATA_SOURCE_URL
+
+def ingest_and_preprocess_data(state: AgentState) -> AgentState:
+    """
+    Simulates data ingestion from an API and basic preprocessing.
+    """
+    task_description = state.get("task_description", "")
+    print(f"Perception Agent: Task = {task_description}")
+    state["current_agent_name"] = "PerceptionAgent"
+
+    try:
+        response = requests.get(DATA_SOURCE_URL, timeout=10)
+        response.raise_for_status()
+        raw_data = response.json()
+        state["input_data"] = raw_data
+
+        if isinstance(raw_data, dict) and 'title' in raw_data and 'completed' in raw_data:
+            processed_data = {
+                "title": raw_data["title"],
+                "completed_status": raw_data["completed"]
+            }
+        else:
+            processed_data = {"error": "Unexpected format", "original": raw_data}
+
+        state["processed_data"] = processed_data
+        state["error_message"] = None
+
+    except requests.exceptions.RequestException as e:
+        err = f"Perception error: {e}"
+        print(err)
+        state["input_data"] = None
+        state["processed_data"] = None
+        state["error_message"] = err
+
+    if not state.get("intermediate_steps"):
+        state["intermediate_steps"] = []
+    state["intermediate_steps"].append({
+        "agent": "PerceptionAgent",
+        "output": state.get("processed_data") or state.get("error_message")
+    })
+
+    return state
+
+if __name__ == "__main__":
+    from .agent_state import AgentState as AS
+    st = AS(task_description="Fetch TODO", intermediate_steps=[])
+    new_st = ingest_and_preprocess_data(st)
+    print(new_st)
+
+# multi_agent_system/deliberation_agent.py
+import json
+from .agent_state import AgentState
+from .config import DEFAULT_AGENT_MODEL
+
+def generate_plan_or_insight(state: AgentState) -> AgentState:
+    """
+    Simulates planning/reasoning using processed data.
+    """
+    task = state.get("task_description", "")
+    pd = state.get("processed_data")
+    print(f"Deliberation Agent: Task = {task}")
+    state["current_agent_name"] = "DeliberationAgent"
+
+    if state.get("error_message"):
+        state["deliberation_output"] = "Error in previous step."
+    elif not pd:
+        state["deliberation_output"] = "No data to deliberate."
+    else:
+        title = pd.get("title")
+        status = pd.get("completed_status")
+        status_txt = "completed" if status else "not completed"
+        llm_out = f"Insight: '{title}' is {status_txt}. Plan: Notify user."
+        state["deliberation_output"] = llm_out
+
+    if not state.get("intermediate_steps"):
+        state["intermediate_steps"] = []
+    state["intermediate_steps"].append({
+        "agent": "DeliberationAgent",
+        "output": state["deliberation_output"],
+        "model": DEFAULT_AGENT_MODEL
+    })
+
+    return state
+
+if __name__ == "__main__":
+    from .agent_state import AgentState as AS
+    st = AS(
+        task_description="Check TODO",
+        processed_data={"title": "T", "completed_status": False},
+        intermediate_steps=[]
+    )
+    print(generate_plan_or_insight(st))
+
+# multi_agent_system/actuation_agent.py
+import json
+from .agent_state import AgentState
+
+def execute_action_and_format_output(state: AgentState) -> AgentState:
+    """
+    Simulates executing the plan and formatting final output.
+    """
+    task = state.get("task_description", "")
+    out = state.get("deliberation_output")
+    print(f"Actuation Agent: Task = {task}")
+    state["current_agent_name"] = "ActuationAgent"
+
+    if state.get("error_message") and not out:
+        state["final_output"] = f"Failed: {state['error_message']}"
+    elif not out:
+        state["final_output"] = "Nothing to actuate."
+    else:
+        cmd = f"LOG: {out}"
+        state["actuation_command"] = cmd
+        payload = {
+            "task": task,
+            "executed_plan": out,
+            "status": "Completed"
+        }
+        state["final_output"] = payload
+
+    if not state.get("intermediate_steps"):
+        state["intermediate_steps"] = []
+    state["intermediate_steps"].append({
+        "agent": "ActuationAgent",
+        "final_output": state["final_output"]
+    })
+
+    return state
+
+if __name__ == "__main__":
+    from .agent_state import AgentState as AS
+    st = AS(
+        task_description="Notify user",
+        deliberation_output="Notify test",
+        intermediate_steps=[]
+    )
+    print(execute_action_and_format_output(st))
+
+# multi_agent_system/orchestrator.py
+import asyncio
+import json
+from typing import Any, Optional
+from langgraph.graph import StateGraph, END
+from .agent_state import AgentState
+from .perception_agent import ingest_and_preprocess_data
+from .deliberation_agent import generate_plan_or_insight
+from .actuation_agent import execute_action_and_format_output
+
+def build_agent_graph() -> StateGraph:
+    workflow = StateGraph(AgentState)
+    workflow.add_node("perception", ingest_and_preprocess_data)
+    workflow.add_node("deliberation", generate_plan_or_insight)
+    workflow.add_node("actuation", execute_action_and_format_output)
+    workflow.set_entry_point("perception")
+    workflow.add_edge("perception", "deliberation")
+    workflow.add_edge("deliberation", "actuation")
+    workflow.add_edge("actuation", END)
+    app = workflow.compile()
+    print("Multi-Agent System: LangGraph workflow compiled successfully.")
+    return app
+
+async def run_orchestration_async(task_description: str, initial_input_data: Optional[Any] = None) -> AgentState:
+    app = build_agent_graph()
+    initial_state = AgentState(
+        task_description=task_description,
+        input_data=initial_input_data,
+        processed_data=None,
+        deliberation_output=None,
+        intermediate_steps=[],
+        actuation_command=None,
+        final_output=None,
+        error_message=None,
+        current_agent_name=None,
+        context_summary=None,
+        available_tools=None
+    )
+    print(f"\nOrchestrator: Starting workflow for task: '{task_description}'")
+    final_state = await app.ainvoke(initial_state)
+    print(f"Orchestrator: Workflow completed for task: '{task_description}'")
+    print("Final State:")
+    print(json.dumps(final_state, indent=2, default=str))
+    return final_state
+
+if __name__ == "__main__":
+    sample_task = "Fetch and analyze the status of a specific TO-DO item from an external API."
+    asyncio.run(run_orchestration_async(task_description=sample_task))
+
+# python_m2_optimization/__init__.py
+
+print("Initializing python_m2_optimization package...")
+
+# python_m2_optimization/environment_setup_notes.py
+
+SETUP_INSTRUCTIONS = """
+# --- Environment Setup for Python on Apple Silicon (M2) ---
+
+# 1. Install Miniforge3 (arm64):
+#    Download and run the installer:
+#    https://github.com/conda-forge/miniforge/releases/latest
+#
+# 2. Create a Conda environment:
+#    conda create -n m2_peak_env python=3.10 -y
+#    conda activate m2_peak_env
+#
+# 3. Install NumPy, SciPy with Accelerate:
+#    conda install numpy scipy pandas scikit-learn "blas=*=accelerate" -c conda-forge -y
+#
+# 4. Install ML libraries:
+#    pip install torch torchvision torchaudio
+#    conda install -c apple tensorflow-deps -y
+#    pip install tensorflow-macos tensorflow-metal
+#
+# 5. Install other tools:
+#    conda install numba jupyterlab ipykernel pyinstrument -c conda-forge -y
+#
+# Verify:
+#   import numpy; numpy.show_config()
+#   import torch; print(torch.backends.mps.is_available())
+"""
+
+def print_setup_instructions():
+    print(SETUP_INSTRUCTIONS)
+
+if __name__ == "__main__":
+    print_setup_instructions()
+
+# python_m2_optimization/library_optimization_demo.py
+import numpy as np
+import time
+
+def check_numpy_config():
+    """Prints NumPy's configuration to check for Accelerate linkage."""
+    print("--- NumPy Configuration ---")
+    np.show_config()
+    print("---------------------------")
+
+def perform_matrix_multiplication(size: int = 2000):
+    """Performs matrix multiplication and times it."""
+    print(f"\nPerforming NumPy matrix multiplication ({size}x{size})...")
+    A = np.random.rand(size, size).astype(np.float32)
+    B = np.random.rand(size, size).astype(np.float32)
+    start = time.perf_counter()
+    np.dot(A, B)
+    end = time.perf_counter()
+    print(f"Done in {end - start:.4f} seconds.")
+    return end - start
+
+def perform_svd_decomposition(size: int = 1000):
+    """Performs SVD and times it."""
+    print(f"\nPerforming NumPy SVD ({size}x{size})...")
+    C = np.random.rand(size, size).astype(np.float32)
+    start = time.perf_counter()
+    np.linalg.svd(C)
+    end = time.perf_counter()
+    print(f"Done in {end - start:.4f} seconds.")
+    return end - start
+
+if __name__ == "__main__":
+    check_numpy_config()
+    for s in [500, 1000, 2000]:
+        perform_matrix_multiplication(s)
+    for s in [500, 1000]:
+        perform_svd_decomposition(s)
+
+# python_m2_optimization/jit_compilation_demo.py
+import numba
+import numpy as np
+import time
+
+def sum_of_squares_python(arr: np.ndarray) -> float:
+    """Calculates sum of squares using a plain Python loop."""
+    total = 0.0
+    for x in arr:
+        total += x * x
+    return total
+
+@numba.njit(fastmath=True)
+def sum_of_squares_numba(arr: np.ndarray) -> float:
+    """Calculates sum of squares using Numba JIT."""
+    total = 0.0
+    for i in range(arr.shape[0]):
+        total += arr[i] * arr[i]
+    return total
+
+@numba.njit(parallel=True, fastmath=True)
+def sum_of_squares_numba_parallel(arr: np.ndarray) -> float:
+    """Calculates sum of squares using Numba JIT with parallelization."""
+    total = 0.0
+    for i in numba.prange(arr.shape[0]):
+        total += arr[i] * arr[i]
+    return total
+
+if __name__ == "__main__":
+    size = 10_000_000
+    data = np.random.rand(size).astype(np.float32)
+
+    start = time.perf_counter()
+    sum_of_squares_python(data)
+    print(f"Python: {time.perf_counter() - start:.4f}s")
+
+    start = time.perf_counter()
+    sum_of_squares_numba(data)  # Cold run
+    print(f"Numba cold: {time.perf_counter() - start:.4f}s")
+
+    start = time.perf_counter()
+    sum_of_squares_numba(data)  # Warm run
+    print(f"Numba warm: {time.perf_counter() - start:.4f}s")
+
+    start = time.perf_counter()
+    sum_of_squares_numba_parallel(data)
+    print(f"Numba par cold: {time.perf_counter() - start:.4f}s")
+
+    start = time.perf_counter()
+    sum_of_squares_numba_parallel(data)
+    print(f"Numba par warm: {time.perf_counter() - start:.4f}s")
+
+# python_m2_optimization/hardware_acceleration_demo.py
+import torch
+import time
+
+def check_mps_availability():
+    """Checks and prints MPS availability."""
+    ok = torch.backends.mps.is_available() and torch.backends.mps.is_built()
+    print(f"MPS available: {ok}")
+    return ok
+
+def pytorch_mps_matrix_multiplication(size: int = 2000, device_type: str = "mps"):
+    """Performs matrix multiplication on MPS or CPU."""
+    if device_type == "mps" and not check_mps_availability():
+        device_type = "cpu"
+    device = torch.device(device_type)
+    print(f"\nPerforming PyTorch matmul on {device} ({size}x{size})...")
+    a = torch.randn(size, size, device=device)
+    b = torch.randn(size, size, device=device)
+
+    _ = torch.matmul(a, b)  # Warm-up
+    if device.type == "mps":
+        torch.mps.synchronize()
+
+    start = time.perf_counter()
+    res = torch.matmul(a, b)
+    if device.type == "mps":
+        torch.mps.synchronize()
+    duration = time.perf_counter() - start
+    print(f"Done in {duration:.4f} seconds.")
+    return duration
+
+def core_ml_conceptual_note():
+    """Conceptual note on Core ML for NPU acceleration."""
+    print("\n--- Core ML (NPU) Conceptual Note ---")
+    print("Use coremltools to convert models to .mlmodel format.")
+    print("Load and predict using Core ML APIs for inference on the NPU.")
+
+if __name__ == "__main__":
+    if check_mps_availability():
+        for s in [1000, 2000]:
+            pytorch_mps_matrix_multiplication(s, "mps")
+            pytorch_mps_matrix_multiplication(s, "cpu")
+    else:
+        print("MPS not available, running CPU benchmark:")
+        pytorch_mps_matrix_multiplication(1000, "cpu")
+
+    core_ml_conceptual_note()
+
+# python_m2_optimization/concurrency_demo.py
+import multiprocessing
+import time
+import math
+import os
+
+def cpu_intensive_task(x: float) -> float:
+    """Simulates a CPU-intensive calculation."""
+    result = 0.0
+    for _ in range(100_000):
+        result += math.sqrt(math.log(x + 1.0) + math.sin(x))
+    return result
+
+def run_sequentially(data: list):
+    """Runs tasks sequentially."""
+    print(f"\nRunning {len(data)} tasks sequentially...")
+    start = time.perf_counter()
+    _ = [cpu_intensive_task(x) for x in data]
+    duration = time.perf_counter() - start
+    print(f"Sequential took {duration:.4f}s")
+    return duration
+
+def run_in_parallel(data: list):
+    """Runs tasks in parallel using multiprocessing.Pool."""
+    cores = os.cpu_count() or 1
+    print(f"\nRunning {len(data)} tasks in parallel on {cores} cores...")
+    start = time.perf_counter()
+    with multiprocessing.Pool(processes=cores) as pool:
+        _ = pool.map(cpu_intensive_task, data)
+    duration = time.perf_counter() - start
+    print(f"Parallel took {duration:.4f}s")
+    return duration
+
+if __name__ == "__main__":
+    dataset = [i * 0.1 + 1.0 for i in range(200)]
+    run_sequentially(dataset)
+    run_in_parallel(dataset)
+
+# python_m2_optimization/profiling_utils.py
+import cProfile
+import pstats
+import io
+
+def example_function_to_profile(iterations: int = 1_000_000) -> int:
+    """Example function that does some work."""
+    total = 0
+    for i in range(iterations):
+        total += i * (i % 100)
+    return total
+
+def profile_function_call(func, *args, **kwargs):
+    """Profiles a function call using cProfile and prints stats."""
+    profiler = cProfile.Profile()
+    profiler.enable()
+    result = func(*args, **kwargs)
+    profiler.disable()
+
+    s = io.StringIO()
+    ps = pstats.Stats(profiler, stream=s).sort_stats('cumtime')
+    ps.print_stats(20)
+    print(s.getvalue())
+
+    return result
+
+if __name__ == "__main__":
+    print("Profiling example_function_to_profile...")
+    result = profile_function_call(example_function_to_profile, iterations=500_000)
+    print(f"Result: {result}")
+
+# utils/__init__.py
+
+print("Initializing utils package...")
+from .helpers import time_execution, format_json_output, simple_logger, logger
+from .constants import PROJECT_NAME, VERSION, AGENT_API_TIMEOUT_SECONDS
+
+# utils/constants.py
+
+# Globals
+PROJECT_NAME = "Unlocking_Peak_Performance_Project"
+VERSION = "1.0.0"
+AGENT_API_TIMEOUT_SECONDS = 30
+DEFAULT_BENCHMARK_ARRAY_SIZE = 1_000_000
+M2_OPTIMIZED_MODE_ENABLED = True
+VERBOSE_LOGGING = False
+
+# utils/helpers.py
+import time
+import json
+import logging
+from .constants import VERBOSE_LOGGING
+
+logging.basicConfig(
+    level=logging.DEBUG if VERBOSE_LOGGING else logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def time_execution(func):
+    """Decorator to time function execution."""
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration = time.perf_counter() - start
+        logger.info(f"{func.__name__} executed in {duration:.4f}s")
+        return result
+    return wrapper
+
+def format_json_output(data: dict, indent: int = 2) -> str:
+    """Pretty-print JSON data."""
+    try:
+        return json.dumps(data, indent=indent, default=str)
+    except TypeError as e:
+        logger.error(f"JSON serialization error: {e}")
+        return f'{{"error": "Serialization failed: {e}"}}'
+
+def simple_logger(message: str, level: str = "info"):
+    """Simple logging wrapper."""
+    getattr(logger, level.lower(), logger.info)(message)
+
+# main_runner.py
+import asyncio
+import sys
+import os
+import multiprocessing
+import time
+
+from multi_agent_system.orchestrator import run_orchestration_async
+from python_m2_optimization.library_optimization_demo import perform_matrix_multiplication
+from python_m2_optimization.jit_compilation_demo import sum_of_squares_numba
+from python_m2_optimization.hardware_acceleration_demo import pytorch_mps_matrix_multiplication
+from python_m2_optimization.concurrency_demo import run_in_parallel
+from python_m2_optimization.profiling_utils import profile_function_call, example_function_to_profile
+from utils import logger, simple_logger, time_execution, format_json_output
+
+import numpy as np
+import torch
+
+@time_execution
+async def run_multi_agent_demo():
+    simple_logger("Starting Multi-Agent System Demo")
+    result = await run_orchestration_async("Fetch and analyze TODO status")
+    if result.get("final_output"):
+        simple_logger("MAS Demo Final Output:")
+        print(format_json_output(result["final_output"]))
+    elif result.get("error_message"):
+        simple_logger(f"MAS Demo Error: {result['error_message']}", level="error")
+
+@time_execution
+def run_python_optimization_demos():
+    simple_logger("Starting Python M2 Optimization Demos")
+    perform_matrix_multiplication(size=1000)
+
+    # Numba JIT
+    data = np.random.rand(1_000_000).astype(np.float32)
+    sum_of_squares_numba(data)
+
+    # PyTorch MPS
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        pytorch_mps_matrix_multiplication(size=1000, device_type="mps")
+    else:
+        simple_logger("MPS not available, skipping MPS demo", level="warning")
+    pytorch_mps_matrix_multiplication(size=1000, device_type="cpu")
+
+    # Multiprocessing demo
+    dataset = list(range(200_000))
+    cores = os.cpu_count() or 1
+    simple_logger(f"Running {len(dataset)} tasks across {cores} cores")
+    start = time.perf_counter()
+    with multiprocessing.Pool(processes=cores) as pool:
+        pool.map(lambda x: x * x, dataset)
+    duration = time.perf_counter() - start
+    simple_logger(f"Multiprocessing took {duration:.4f}s")
+
+@time_execution
+def run_profiling_demo():
+    simple_logger("Starting Profiling Demo")
+    profile_function_call(example_function_to_profile, iterations=500_000)
+
+async def main():
+    if len(sys.argv) > 1:
+        choice = sys.argv[1].lower()
+        if choice == "mas":
+            await run_multi_agent_demo()
+        elif choice == "opt":
+            run_python_optimization_demos()
+        elif choice == "profile":
+            run_profiling_demo()
+        else:
+            print("Usage: python main_runner.py [mas|opt|profile|all]")
+    else:
+        await run_multi_agent_demo()
+        print("\n" + "="*40 + "\n")
+        run_python_optimization_demos()
+        print("\n" + "="*40 + "\n")
+        run_profiling_demo()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# requirements.txt
+langchain>=0.1.0
+langgraph>=0.0.30
+requests>=2.25.0
+numpy>=1.20.0
+numba>=0.55.0
+torch>=1.12.0
+
+<!-- README.md -->
+# Unlocking Peak Performance: Advanced Multi-Agent Systems & M2 Python Mastery
+
+## Project Overview
+This project demonstrates:
+- A Multi-Agent System using LangGraph with Perception, Deliberation, Actuation layers.
+- Python M2 Optimization Demos:
+  - NumPy & Apple's Accelerate
+  - Numba JIT compilation
+  - PyTorch MPS GPU acceleration
+  - Multiprocessing concurrency
+  - Profiling with cProfile
+
+## Setup
+
+1. **Install Miniforge3 (ARM64)**
+   Download and run the arm64 installer from:  
+   https://github.com/conda-forge/miniforge/releases/latest
+
+2. **Create and activate environment**  
+   ```bash
+   conda create -n m2_peak_env python=3.10 -y
+   conda activate m2_peak_env
+
+	3.	Install dependencies
+
+conda install numpy numba "blas=*=accelerate" -c conda-forge -y
+pip install torch torchvision torchaudio langchain langgraph requests
+
+
+	4.	Run demos
+
+python main_runner.py [mas|opt|profile|all]
+
+
+
+File Structure
+
+Unlocking_Peak_Performance_Project/
+├── multi_agent_system/
+│   ├── __init__.py
+│   ├── agent_state.py
+│   ├── config.py
+│   ├── perception_agent.py
+│   ├── deliberation_agent.py
+│   ├── actuation_agent.py
+│   └── orchestrator.py
+├── python_m2_optimization/
+│   ├── __init__.py
+│   ├── environment_setup_notes.py
+│   ├── library_optimization_demo.py
+│   ├── jit_compilation_demo.py
+│   ├── hardware_acceleration_demo.py
+│   ├── concurrency_demo.py
+│   └── profiling_utils.py
+├── utils/
+│   ├── __init__.py
+│   ├── constants.py
+│   └── helpers.py
+├── main_runner.py
+├── requirements.txt
+└── README.md
+
+Here’s what’s going on in that “Dynamic LLM Orchestration Framework”:
+
+⸻
+
+1. models.yaml
+
+This is where you declare your available LLMs and their capabilities:
+
+models:
+  - name: llama3:8b
+    provider: ollama
+    speed: 25            # tokens/sec
+    cost: 0.000          # $ per 1K tokens
+    max_ctx: 8192        # maximum context window
+    strengths: ["general", "json"]
+  - name: gpt-4o-mini
+    provider: openai
+    speed: 50
+    cost: 0.01
+    max_ctx: 128000
+    strengths: ["code", "analysis", "json"]
+  - name: gemini-1.5-flash
+    provider: google
+    speed: 70
+    cost: 0.005
+    max_ctx: 1000000
+    strengths: ["long_context", "vision"]
+
+Each entry gives you—at a glance—how fast it is, how much it costs, how big a prompt it can handle, and what it’s good at.
+
+⸻
+
+2. dynamic_router.py Breakdown
+
+import yaml, time, random, pathlib
+from dataclasses import dataclass, asdict
+from typing import Any, Dict, List
+
+ROOT = pathlib.Path(__file__).parent
+CFG  = yaml.safe_load((ROOT / "models.yaml").read_text())
+
+	•	Load config: Reads your models.yaml into CFG["models"].
+
+@dataclass
+class ModelProfile:
+    name: str
+    provider: str
+    speed: float
+    cost: float
+    max_ctx: int
+    strengths: List[str]
+
+	•	Data container: Each model’s entry becomes a ModelProfile instance.
+
+def _fingerprint(task: str, meta: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "length": len(meta.get("prompt", "")),
+        "json": meta.get("json", False),
+        "priority": any(k in task for k in ("urgent", "blocker"))
+    }
+
+	•	Fingerprint the request:
+	•	length: how big your prompt is
+	•	json: whether you need structured (JSON) output
+	•	priority: quick hack to see if the task name contains “urgent” or “blocker”
+
+def _score(fp: Dict[str, Any], m: ModelProfile) -> float:
+    score = 0
+    if fp["json"] and "json" in m.strengths:       score += 4
+    if fp["length"] > 3000 and m.max_ctx > 16000: score += 3
+    if fp["priority"]:                             score += m.speed / 50
+    score += (1 / m.cost) * 2
+    return score + random.uniform(0, 0.1)
+
+	•	Model scoring:
+	•	+4 points if you need JSON and the model is good at JSON.
+	•	+3 if your prompt is very long and the model’s context window can handle it.
+	•	Boost by speed if the task is marked high-priority.
+	•	Big bump for cheaper models (1/cost)*2.
+	•	A tiny random jitter to break ties.
+
+def _dispatch(model: ModelProfile, prompt: str, meta: Dict[str, Any]) -> Dict[str, Any]:
+    # 👉 Replace this stub with your real SDK call
+    return {"model": model.name, "content": f"[{model.name}] → {prompt[:60]}…"}
+
+	•	Dispatch: “Call” the chosen model. Right now it just echoes back, but you’d swap in your openai.ChatCompletion.create(...) or Ollama SDK call here.
+
+def route(task: str, prompt: str, metadata: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    metadata = metadata or {}
+    fp = _fingerprint(task, {"prompt": prompt, **metadata})
+    models = [ModelProfile(**m) for m in CFG["models"]]
+    chosen = max(models, key=lambda m: _score(fp, m))
+
+    start  = time.time()
+    reply  = _dispatch(chosen, prompt, metadata)
+    elapsed = round(time.time() - start, 3)
+
+    _log = {
+        "ts": time.time(),
+        "task": task,
+        "model": chosen.name,
+        "elapsed": elapsed,
+        **fp
+    }
+    (ROOT / "router.log").open("a").write(yaml.safe_dump([_log]))
+    return reply
+
+	•	route(...) is your single entry-point:
+	1.	Builds a fingerprint of the request.
+	2.	Instantiates each ModelProfile.
+	3.	Scores them with _score().
+	4.	Picks the highest-scoring model.
+	5.	Calls _dispatch() (your real API).
+	6.	Measures latency, appends a YAML-formatted log entry to router.log.
+	7.	Returns the model’s reply.
+
+⸻
+
+3. How to Use
+	1.	Drop both files (dynamic_router.py + models.yaml) into a folder called router/ anywhere.
+	2.	Install PyYAML:
+
+pip install pyyaml
+
+
+	3.	Call it from your code:
+
+from router.dynamic_router import route
+
+resp = route(
+    task="generate_report_json",
+    prompt="List all users and their purchase totals…",
+    metadata={"json": True, "max_tokens": 500}
+)
+print(resp["content"])
+
+
+	4.	Inspect router/router.log afterwards to see which models ran, their latency, cost-tradeoff, etc.
+
+⸻
+
+Why This Matters
+	•	Dynamic selection: automatically pick the best model for each job—fast, cheap, or context-rich.
+	•	Lightweight: no heavy dependencies, runs on any Python 3.10+ runtime.
+	•	Self-tuning: by logging latency and (if you extend it) success/failure, you can build a feedback loop to adjust your scoring weights over time.
+
+That’s it—one YAML, one Python file, instant smart LLM routing!
+
+
