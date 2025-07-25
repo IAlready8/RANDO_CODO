@@ -1,0 +1,133 @@
+, you glorious bastard—an AI that poaches unadvertised gigs and cold-emails ’em while you nap.
+
+⸻
+
+⚡️ Opportunity Extractor & Outreach Automator ⚡️
+
+What it does:
+	•	Scrapes RemoteOK for keywords you choose.
+	•	Uses GPT to craft killer 3-line outreach.
+	•	Fires off emails via your SMTP—instant recruiter spam flood.
+
+Why it’s badass:
+	•	You sleep, it hunts.
+	•	No more missing that hidden $100k role.
+	•	Leverage AI + automation to ghost-hunt opportunities.
+
+⸻
+
+
+#!/usr/bin/env python3
+"""
+Opportunity Extractor & Outreach Automator
+Requirements:
+  pip install requests beautifulsoup4 openai python-dotenv schedule
+Usage:
+  1. Create a .env file (see sample below).
+  2. python3 opportunity_extractor.py
+"""
+
+import os, time, requests, schedule
+from bs4 import BeautifulSoup
+import openai, smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+
+# ─── CONFIG ───────────────────────────────────────────────
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SMTP_SERVER      = os.getenv("SMTP_SERVER")
+SMTP_PORT        = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER        = os.getenv("SMTP_USER")
+SMTP_PASS        = os.getenv("SMTP_PASS")
+TARGET_EMAIL     = os.getenv("TARGET_EMAIL")           # 🚩 set recruiter/your email
+TARGET_KEYWORDS  = [kw.strip() for kw in os.getenv("TARGET_KEYWORDS","electrical,automation,AI").split(",")]
+CHECK_INTERVAL   = int(os.getenv("CHECK_INTERVAL_MIN","60"))  # minutes
+# ───────────────────────────────────────────────────────────
+
+if not all([OPENAI_API_KEY, SMTP_SERVER, SMTP_USER, SMTP_PASS, TARGET_EMAIL]):
+    print("🚩 Missing required env vars. Check .env!")
+    exit(1)
+
+openai.api_key = OPENAI_API_KEY
+sent_links = set()
+
+def fetch_jobs():
+    resp = requests.get("https://remoteok.com/", headers={"User-Agent":"OpBot/1.0"})
+    soup = BeautifulSoup(resp.text, "html.parser")
+    jobs=[]
+    for tr in soup.select("tr.job"):
+        title   = tr.get("data-position")
+        company = tr.get("data-company")
+        link    = "https://remoteok.com"+tr.get("data-href")
+        desc    = tr.select_one(".description").get_text(strip=True)
+        jobs.append({"title":title,"company":company,"link":link,"desc":desc})
+    return jobs
+
+def filter_jobs(jobs):
+    return [j for j in jobs if any(kw.lower() in (j["title"]+j["desc"]).lower() for kw in TARGET_KEYWORDS)]
+
+def craft_email(job):
+    prompt = (
+      f"Craft a 3-sentence cold-email subject & body to pitch for this role:\n"
+      f"Title: {job['title']}\nCompany: {job['company']}\nLink: {job['link']}\n"
+      "Be direct, confident, value-focused."
+    )
+    res = openai.ChatCompletion.create(
+      model="gpt-4o-mini",
+      messages=[{"role":"system","content":"You write sharp cold emails."},
+                {"role":"user","content":prompt}],
+      temperature=0.7, max_tokens=200
+    )
+    txt = res.choices[0].message.content.strip().split("\n",1)
+    subject = txt[0].replace("Subject:","").strip()
+    body    = txt[1].replace("Body:","").strip() if len(txt)>1 else "\n".join(txt)
+    return subject, body
+
+def send_email(to, subject, body):
+    msg = MIMEMultipart()
+    msg["From"]    = SMTP_USER
+    msg["To"]      = to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body+"\n\nLink: "+job["link"],"plain"))
+    with smtplib.SMTP(SMTP_SERVER,SMTP_PORT) as s:
+        s.starttls(); s.login(SMTP_USER,SMTP_PASS); s.send_message(msg)
+
+def job_loop():
+    jobs = filter_jobs(fetch_jobs())
+    for job in jobs:
+        if job["link"] in sent_links: continue
+        subject, body = craft_email(job)
+        send_email(TARGET_EMAIL, subject, body)
+        print(f"✅ Sent for {job['title']} @ {job['company']}")
+        sent_links.add(job["link"])
+
+def main():
+    print(f"🚀 Starting… checking every {CHECK_INTERVAL}m")
+    schedule.every(CHECK_INTERVAL).minutes.do(job_loop)
+    while True:
+        schedule.run_pending(); time.sleep(5)
+
+if __name__=="__main__":
+    main()
+
+.env SAMPLE
+
+OPENAI_API_KEY=sk-…
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASS=app-password
+TARGET_EMAIL=you@gmail.com
+TARGET_KEYWORDS=electrical,AI,automation
+CHECK_INTERVAL_MIN=60
+
+
+⸻
+
+✅ Next Move
+	1.	Spin up: Install deps, drop in your .env.
+	2.	Run: python3 opportunity_extractor.py—let it rip.
+	3.	Profit: Check your inbox as AI cold-emails hidden gigs.
+
